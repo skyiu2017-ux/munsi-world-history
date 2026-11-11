@@ -5,7 +5,7 @@
  * 배포: 배포 > 새 배포 > 유형 "웹 앱" > 실행 계정 "나" > 액세스 "모든 사용자" > 배포
  * 연결: 발급된 웹 앱 URL(.../exec)을 앱의 src/data/schoolConfig.ts 안 SHEETS_API_URL에 붙여넣기
  *
- * 학생(학년·반·번호) 1명당 한 줄로 저장되며, 다른 기기에서도 같은 학생으로 누적됩니다.
+ * 학생(학년·반·번호) 한 명당 레벨업/60초 미궁 각각 한 줄로 저장합니다. 기존 합산 기록은 보존합니다.
  * 실제 이름은 스프레드시트에만 저장하며 doGet 응답에 내보내지 않습니다.
  * 부적절한 닉네임 등은 시트에서 해당 줄을 삭제하면 랭킹에서 사라집니다.
  */
@@ -15,7 +15,7 @@ const GRADE = 3;
 const CLASS_COUNT = 13; // 학급 수가 바뀌면 앱의 schoolConfig.ts와 함께 수정
 const HEADERS = [
   'id', '닉네임', '학급', '점수', '정답률', '최대콤보', '칭호',
-  '소요시간(초)', '문항당속도(초)', '탈출위치', '탈출률', '플레이횟수', '최근기록', '학생이름(비공개)', '출석번호(비공개)'
+  '소요시간(초)', '문항당속도(초)', '탈출위치', '탈출률', '플레이횟수', '최근기록', '학생이름(비공개)', '출석번호(비공개)', '게임'
 ];
 
 function doGet() {
@@ -28,6 +28,7 @@ function doGet() {
       .map(function (r) {
         return {
           id: String(r[0]),
+          mode: r[15] === 'adaptive' || r[15] === 'speed' ? r[15] : 'legacy',
           nickname: String(r[1]),
           gradeClass: String(r[2]),
           score: num_(r[3], 0, 1000000),
@@ -57,6 +58,8 @@ function doPost(e) {
   }
 
   const id = String(body.id || '');
+  const mode = body.mode === 'speed' ? 'speed' : body.mode === 'adaptive' ? 'adaptive' : '';
+  if (!mode) return json_({ ok: false, error: 'bad game mode' });
   const gradeClass = String(body.gradeClass || '');
   const nickname = text_(body.nickname, 12);
   const studentName = text_(body.studentName, 20);
@@ -82,16 +85,17 @@ function doPost(e) {
     let rowIndex = -1;
     let playCount = 0;
     if (last > 1) {
-      const ids = sh.getRange(2, 1, last - 1, 1).getValues();
-      for (let i = 0; i < ids.length; i++) {
-        if (String(ids[i][0]) === id) {
+      const existing = sh.getRange(2, 1, last - 1, HEADERS.length).getValues();
+      for (let i = 0; i < existing.length; i++) {
+        const r = existing[i];
+        if (String(r[0]) !== id) continue;
+        // 같은 출석번호를 다른 이름으로 등록하지 못하도록 게임 종류와 관계없이 검사
+        if (String(r[13] || '') && String(r[13]) !== studentName) {
+          return json_({ ok: false, error: 'identity_conflict' });
+        }
+        if (String(r[15]) === mode) {
           rowIndex = i + 2;
-          playCount = num_(sh.getRange(rowIndex, 12).getValue(), 0, 1000000);
-          const registeredName = String(sh.getRange(rowIndex, 14).getValue() || '');
-          if (registeredName && registeredName !== studentName) {
-            return json_({ ok: false, error: 'identity_conflict' });
-          }
-          break;
+          playCount = num_(r[11], 0, 1000000);
         }
       }
     }
@@ -115,7 +119,8 @@ function doPost(e) {
       playCount + (played ? 1 : 0),
       new Date(),
       studentName, // 교사만 열람하는 시트에 저장하며 공용 랭킹 조회에는 반환하지 않음
-      studentNumber
+      studentNumber,
+      mode
     ];
 
     if (rowIndex === -1) {
@@ -166,6 +171,9 @@ function getSheet_() {
     sh.getRange('G:G').setNumberFormat('@');
     sh.getRange('J:J').setNumberFormat('@');
   }
+  // 이전 15열 시트는 마지막에 '게임' 열만 추가하여 기존 기록을 보존합니다.
+  if (sh.getMaxColumns() < HEADERS.length) sh.insertColumnsAfter(sh.getMaxColumns(), HEADERS.length - sh.getMaxColumns());
+  if (sh.getRange(1, HEADERS.length).getValue() !== '게임') sh.getRange(1, HEADERS.length).setValue('게임').setFontWeight('bold');
   return sh;
 }
 
