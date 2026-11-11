@@ -84,13 +84,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
 
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          const elapsed = (Date.now() - startTime) / 1000;
-          setFinalTimeSeconds(Math.min(60, Number(elapsed.toFixed(1))));
-          endChallenge();
-          return 0;
-        }
+        if (prev <= 1) return 0;
         return prev - 1;
       });
     }, 1000);
@@ -101,6 +95,17 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   const endChallenge = () => {
     setGameState('ended');
   };
+
+  // 상태 업데이트 함수 안에서 다른 상태를 바꾸지 않고 시간 종료를 처리합니다.
+  useEffect(() => {
+    if (gameState !== 'playing' || timeLeft !== 0) return;
+    clearInterval(timerRef.current);
+    setFinalTimeSeconds(60);
+    setGameState('ended');
+    if (distanceToExit <= 8 && !failReason) {
+      confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+    }
+  }, [gameState, timeLeft, distanceToExit, failReason]);
 
   const handleSelect = (selectedIdx: number) => {
     if (gameState !== 'playing' || answerLock.current) return;
@@ -141,6 +146,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
 
       // If reached exit door!
       if (newDistance === 0) {
+        confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
         clearInterval(timerRef.current);
         const elapsed = (Date.now() - startTime) / 1000;
         setFinalTimeSeconds(Number(elapsed.toFixed(1)));
@@ -190,8 +196,8 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   const isEscaped = !failReason && (distanceToExit <= 0 ||
     (gameState === 'ended' && timeLeft === 0 && distanceToExit <= 8));
   const danger = Math.max(0, Math.min(1, (60 - timeLeft) / 60));
-  const heroPosition = 16 + ((100 - distanceToExit) / 100) * 58;
-  const monsterPosition = Math.max(-19, heroPosition - 48 + danger * 42);
+  const heroPosition = 7 + ((100 - distanceToExit) / 100) * 50;
+  const monsterPosition = Math.max(-22, heroPosition - 48 + danger * 40);
   const escapeFloor = isEscaped 
     ? '지상 탈출 성공! 🏆' 
     : distanceToExit <= 25 
@@ -267,7 +273,8 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   if (gameState === 'ended') {
     return (
       <div className="max-w-xl mx-auto px-4 py-12 text-center space-y-6">
-        <div className="flex justify-center py-2">
+        <div className="flex justify-center items-center py-2 min-h-28">
+          {!isEscaped && <div className="w-24 sm:w-28 -mr-5 opacity-90"><BlueMonsterArm caught /></div>}
           <PixelExplorer size="xl" state={isEscaped ? 'escaped' : 'trembling'} showSweat={!isEscaped} />
         </div>
 
@@ -428,7 +435,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           <div 
             className="absolute transition-all duration-300 ease-out z-20"
             style={{
-              left: `${Math.max(12, Math.min(74, heroPosition))}%`,
+              left: `${Math.max(7, Math.min(57, heroPosition))}%`,
               bottom: '2px'
             }}
           >
