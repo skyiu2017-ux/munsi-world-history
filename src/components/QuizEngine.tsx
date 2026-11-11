@@ -68,7 +68,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const [difficultyChangeNotice, setDifficultyChangeNotice] = useState<string | null>(null);
 
   // Timer per question (15s standard)
-  const [timeLeft, setTimeLeft] = useState<number>(20);
+  const [timeLeft, setTimeLeft] = useState<number>(35);
   const timerRef = useRef<any>(null);
 
   // Session startTime
@@ -117,7 +117,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   useEffect(() => {
     if (!currentQ || isAnswered) return;
 
-    setTimeLeft(20);
+    // 단원 학습은 읽고 추론할 시간을 충분히 주고, 적응형은 약간 짧게 운영한다.\n    setTimeLeft(config.mode === 'chapter' ? (config.initialDifficulty === '고급' ? 45 : 35) : 30);
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
