@@ -121,6 +121,18 @@ function doPost(e) {
     if (rowIndex === -1) {
       sh.appendRow(row);
     } else {
+      // 다른 기기에서 낮은 점수를 보내더라도 개인 최고 점수와 기록은 보존한다.
+      const previous = sh.getRange(rowIndex, 1, 1, HEADERS.length).getValues()[0];
+      const previousScore = num_(previous[3], 0, 1000000);
+      if (previousScore > row[3]) {
+        row[3] = previousScore;
+        row[4] = previous[4];
+        row[7] = previous[7];
+        row[8] = previous[8];
+        row[9] = previous[9];
+        row[10] = previous[10];
+      }
+      row[5] = Math.max(num_(previous[5], 0, 10000), row[5]);
       sh.getRange(rowIndex, 1, 1, HEADERS.length).setValues([row]);
     }
     return json_({ ok: true });
