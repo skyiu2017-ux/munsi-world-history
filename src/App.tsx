@@ -377,6 +377,7 @@ export default function App() {
             userProfile={userProfile}
             onUpdateProfile={handleUpdateProfile}
             onStartChallenge={() => setCurrentTab('speed')}
+            onStartLevelUp={startAdaptiveQuiz}
             remoteEnabled={isRemoteEnabled()}
             syncState={syncState}
             onRefresh={syncLeaderboard}
