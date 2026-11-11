@@ -366,7 +366,7 @@ export const storageService = {
     entries = entries.filter(e => !(e.isCurrentUser && e.mode === mode));
     const userEntry: LeaderboardEntry = {
       id: this.getPlayerId(),
-      mode,
+      mode: mode === 'speed' ? 'speed' : 'adaptive',
       rank: 1,
       nickname: profile.nickname,
       schoolName: profile.schoolName,
