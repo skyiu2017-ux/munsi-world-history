@@ -184,7 +184,7 @@ export default function App() {
     setQuizConfig({
       mode: 'adaptive',
       initialDifficulty: '초급',
-      questionCount: 10
+      questionCount: 20
     });
     setCurrentTab('quizSession');
   };
@@ -217,7 +217,7 @@ export default function App() {
       profile.completedChapters = storageService.getUserProfile().completedChapters;
     }
 
-    const escapeRate = result.escapeFloor?.includes('지상 탈출')
+    const escapeRate = result.escapeFloor?.includes('탈출 성공')
       ? 100
       : Math.min(95, Math.round((result.score / 1500) * 100));
 
@@ -249,7 +249,7 @@ export default function App() {
       score: result.score,
       accuracy: result.accuracy,
       maxCombo: result.maxCombo,
-      mode: quizConfig?.mode === 'adaptive' ? '적응형' : '단원 퀴즈',
+      mode: quizConfig?.mode === 'adaptive' ? '레벨업 퀴즈' : '단원 퀴즈',
       timeTakenSeconds: result.timeTakenSeconds,
       speedPerQuestion: result.speedPerQuestion,
       escapeFloor: result.escapeFloor
@@ -458,7 +458,7 @@ export default function App() {
           <div className="bg-white dark:bg-stone-900 rounded-3xl border-2 border-amber-600/60 dark:border-amber-500/40 shadow-2xl max-w-md w-full p-6 text-center space-y-5">
             {/* Pixel Explorer Graphic Header */}
             <div className="relative mx-auto w-24 h-24 bg-stone-950 rounded-2xl border-2 border-amber-600 flex items-center justify-center p-2 shadow-inner">
-              <PixelExplorer state="cheering" isSweating={false} />
+              <PixelExplorer state={lastQuizResult.escapeFloor?.includes("도전 실패") ? "trembling" : "cheering"} showSweat={lastQuizResult.escapeFloor?.includes("도전 실패")} />
               <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-amber-500 text-stone-950 flex items-center justify-center font-bold text-xs shadow-md">
                 ★
               </div>
@@ -467,12 +467,16 @@ export default function App() {
             <div className="space-y-1">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-800 text-[11px] font-pixel text-amber-800 dark:text-amber-300">
                 <Compass className="w-3 h-3 text-amber-600" />
-                <span>DUNGEON EXPEDITION COMPLETE</span>
+                <span>{lastQuizResult.escapeFloor?.includes("도전 실패") ? "GAME OVER" : "QUIZ RESULT"}</span>
               </div>
               <h3 className="text-2xl font-black text-stone-900 dark:text-stone-100 font-display">
-                {lastQuizResult.escapeFloor?.includes('지상 탈출')
-                  ? '지상 미궁 탈출 성공! 🏆'
-                  : '던전 탐험 완료!'}
+                {lastQuizResult.escapeFloor?.includes('탈출 성공')
+                  ? '1층 도착! 미궁 탈출 성공! 🏆'
+                  : lastQuizResult.escapeFloor?.includes('도전 실패')
+                  ? '탈출 실패 · GAME OVER'
+                  : quizConfig?.mode === 'chapter'
+                  ? '단원 학습 완료'
+                  : '이번 학습 결과'}
               </h3>
               <p className="text-xs text-stone-500 dark:text-stone-400">
                 {lastQuizResult.escapeFloor ? (
@@ -563,6 +567,7 @@ export default function App() {
               <button
                 onClick={() => {
                   setLastQuizResult(null);
+                  setQuizConfig(null);
                   setCurrentTab('speed');
                 }}
                 className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-orange-600 hover:bg-orange-700 text-white transition-colors flex items-center justify-center gap-1 shadow-xs"
@@ -574,7 +579,7 @@ export default function App() {
                 onClick={closeResultModal}
                 className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-stone-900 hover:bg-black dark:bg-stone-800 dark:hover:bg-stone-700 text-white shadow-xs transition-colors flex items-center justify-center gap-1"
               >
-                <span>시대별 개념</span>
+                <span>첫 화면으로</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -590,7 +595,7 @@ export default function App() {
             <span aria-hidden="true">·</span>
             <span>4대 문명부터 제국주의까지</span>
             <span aria-hidden="true">·</span>
-            <span>적응형 문제은행 & 학급 랭킹전</span>
+            <span>레벨업 퀴즈 & 학급 랭킹전</span>
           </div>
           <div>
             © 2026 중3 세계사 마스터. 모든 역사 교육 콘텐츠는 대한민국 중학교 교과 기준을 준수합니다.
