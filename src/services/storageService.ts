@@ -16,9 +16,13 @@ const STORAGE_KEYS = {
 const DEFAULT_HISTORY: QuizAttemptRecord[] = [];
 
 const rankEntries = (entries: LeaderboardEntry[]): LeaderboardEntry[] => {
-  entries.sort((a, b) => b.score - a.score);
-  entries.forEach((e, idx) => {
-    e.rank = idx + 1;
+  // 모드별로 별개의 순위를 매깁니다. 기존 합산 점수는 기록만 보존합니다.
+  entries.sort((a, b) => (a.mode || 'legacy').localeCompare(b.mode || 'legacy') || b.score - a.score);
+  const counts: Record<string, number> = {};
+  entries.forEach(e => {
+    const group = e.mode || 'legacy';
+    counts[group] = (counts[group] || 0) + 1;
+    e.rank = counts[group];
   });
   return entries;
 };
@@ -226,16 +230,19 @@ export const storageService = {
     }
   },
 
-  markPendingSync(kind: 'played' | 'profile'): void {
+  markPendingSync(kind: 'played' | 'profile', mode?: string): void {
     try {
-      const current = localStorage.getItem(STORAGE_KEYS.PENDING_SYNC);
-      if (current === 'played' && kind === 'profile') return; // 'played'가 더 우선
-      localStorage.setItem(STORAGE_KEYS.PENDING_SYNC, kind);
+      // 이전 버전의 'played' 플래그는 분리 전 기록이라 게임을 판별할 수 없습니다.
+      const raw = localStorage.getItem(STORAGE_KEYS.PENDING_SYNC);
+      const queue: string[] = raw?.startsWith('[') ? JSON.parse(raw) : [];
+      const token = kind === 'played' && (mode === 'adaptive' || mode === 'speed')
+        ? 'played:' + mode : 'profile';
+      if (!queue.includes(token)) queue.push(token);
+      localStorage.setItem(STORAGE_KEYS.PENDING_SYNC, JSON.stringify(queue));
     } catch (e) {}
   },
 
-  // 서버(구글 시트)와 랭킹을 맞춥니다: 못 올린 내 기록을 올리고, 전체 기록을 내려받습니다.
-  // 동기화가 겹치면 기록이 두 번 올라갈 수 있어, 한 번에 하나씩 차례로 실행합니다.
+  // 서버(구글 시트)와 모드별 최고 기록 동기화. 보내지 못한 기록은 기기에 남겨 둡니다.
   syncLeaderboardWithServer(): Promise<'ok' | 'error' | 'disabled'> {
     const run = syncQueue.then(() => this.runLeaderboardSync());
     syncQueue = run.catch(() => undefined);
@@ -246,39 +253,43 @@ export const storageService = {
     if (!isRemoteEnabled()) return 'disabled';
     const playerId = this.getPlayerId();
     try {
-      let pending: string | null = null;
-      try {
-        pending = localStorage.getItem(STORAGE_KEYS.PENDING_SYNC);
-      } catch (e) {}
-
-      const mine = this.getLeaderboard().find(e => e.isCurrentUser);
-      if (pending && mine) {
-        let sent = false;
-        try {
-          const profile = this.getUserProfile();
-          if (profile.studentName && profile.studentNumber) {
-            sent = await submitRemoteEntry(mine, pending === 'played', profile.studentName, profile.studentNumber);
-          }
-        } catch (e) {
-          sent = false;
-        }
-        if (sent) {
-          pending = null;
+      const raw = localStorage.getItem(STORAGE_KEYS.PENDING_SYNC) || '';
+      const pending: string[] = raw.startsWith('[') ? JSON.parse(raw) : [];
+      const mine = this.getLeaderboard().filter(e => e.isCurrentUser && (e.mode === 'adaptive' || e.mode === 'speed'));
+      const remaining: string[] = [];
+      for (const token of pending) {
+        const modes = token === 'profile' ? ['adaptive', 'speed'] : [token.replace('played:', '')];
+        for (const mode of modes) {
+          if (mode !== 'adaptive' && mode !== 'speed') continue;
+          const entry = mine.find(e => e.mode === mode);
+          if (!entry) continue;
           try {
-            localStorage.removeItem(STORAGE_KEYS.PENDING_SYNC);
-          } catch (e) {}
+            const profile = this.getUserProfile();
+            const ok = Boolean(profile.studentName && profile.studentNumber) &&
+              await submitRemoteEntry(entry, token.startsWith('played:'), profile.studentName!, profile.studentNumber!);
+            if (!ok && !remaining.includes(token)) remaining.push(token);
+          } catch (e) {
+            if (!remaining.includes(token)) remaining.push(token);
+          }
         }
       }
+      if (remaining.length) localStorage.setItem(STORAGE_KEYS.PENDING_SYNC, JSON.stringify(remaining));
+      else localStorage.removeItem(STORAGE_KEYS.PENDING_SYNC);
 
       const remote = await fetchRemoteLeaderboard();
-      let merged: LeaderboardEntry[] = remote.map(e => ({ ...e, isCurrentUser: e.id === playerId }));
-      // 아직 서버에 못 올린 내 기록은 화면에서 사라지지 않게 유지
-      if (pending && mine) {
-        merged = merged.filter(e => !e.isCurrentUser);
-        merged.push(mine);
+      let merged: LeaderboardEntry[] = remote
+        .filter(e => e.mode === 'adaptive' || e.mode === 'speed')
+        .map(e => ({ ...e, isCurrentUser: e.id === playerId }));
+      // 오프라인 상태에서 저장된 두 게임의 기록이 사라지지 않도록 보존
+      const unsentModes = new Set(remaining.filter(t => t.startsWith('played:')).map(t => t.slice(7)));
+      for (const entry of mine) {
+        if (unsentModes.has(entry.mode || '')) {
+          merged = merged.filter(e => !(e.id === entry.id && e.mode === entry.mode));
+          merged.push(entry);
+        }
       }
       this.saveLeaderboard(rankEntries(merged));
-      return 'ok';
+      return remaining.length ? 'error' : 'ok';
     } catch (e) {
       console.error('Failed to sync leaderboard', e);
       return 'error';
@@ -297,6 +308,7 @@ export const storageService = {
         real.forEach(e => {
           if (e.id === 'current-user') e.id = playerId; // 예전 버전 기록 이어받기
           e.isCurrentUser = e.id === playerId;
+          e.mode = e.mode === 'adaptive' || e.mode === 'speed' ? e.mode : 'legacy';
           e.schoolName = SCHOOL_NAME;
         });
         rankEntries(real);
@@ -343,55 +355,50 @@ export const storageService = {
     this.saveUserProfile(profile);
 
     let entries = this.getLeaderboard();
-
-    // Check if user already exists
-    const existingIndex = entries.findIndex(e => e.isCurrentUser);
-    const existing = existingIndex >= 0 ? entries[existingIndex] : null;
-
-    // Filter out existing user entry
-    entries = entries.filter(e => !e.isCurrentUser);
-
+    if (mode !== 'adaptive' && mode !== 'speed') {
+      return { newRank: 0, totalPlayers: 0 };
+    }
+    const existing = entries.find(e => e.isCurrentUser && e.mode === mode);
+    const newBest = !existing || score > existing.score;
+    entries = entries.filter(e => !(e.isCurrentUser && e.mode === mode));
     const userEntry: LeaderboardEntry = {
       id: this.getPlayerId(),
+      mode,
       rank: 1,
       nickname: profile.nickname,
       schoolName: profile.schoolName,
       gradeClass: profile.gradeClass,
-      score: Math.max(score, profile.highScoreSpeed, profile.highScoreAdaptive),
-      accuracy,
+      score: newBest ? score : existing!.score,
+      accuracy: newBest ? accuracy : existing!.accuracy,
       maxCombo: Math.max(maxCombo, existing?.maxCombo || 0),
       title: profile.title,
       avatarSeed: 'CurrentUser',
       isCurrentUser: true,
       timestamp: '방금 전',
-      timeTakenSeconds: metrics?.timeTakenSeconds ?? existing?.timeTakenSeconds,
-      speedPerQuestion: metrics?.speedPerQuestion ?? existing?.speedPerQuestion,
-      escapeFloor: metrics?.escapeFloor ?? existing?.escapeFloor ?? 'B15층 (지하 미궁 입구)',
-      escapeRate: metrics?.escapeRate ?? existing?.escapeRate ?? 0
+      timeTakenSeconds: newBest ? metrics?.timeTakenSeconds : existing?.timeTakenSeconds,
+      speedPerQuestion: newBest ? metrics?.speedPerQuestion : existing?.speedPerQuestion,
+      escapeFloor: newBest ? (metrics?.escapeFloor || '도전 기록') : existing?.escapeFloor,
+      escapeRate: newBest ? (metrics?.escapeRate || 0) : existing?.escapeRate
     };
-
     entries.push(userEntry);
-    entries.sort((a, b) => b.score - a.score);
-
-    // Re-assign ranks
-    entries.forEach((e, idx) => {
-      e.rank = idx + 1;
-    });
-
+    rankEntries(entries);
     this.saveLeaderboard(entries);
-    this.markPendingSync('played');
-    const myRank = entries.find(e => e.isCurrentUser)?.rank || entries.length;
-    return { newRank: myRank, totalPlayers: entries.length };
+    this.markPendingSync('played', mode);
+    const myRank = entries.find(e => e.isCurrentUser && e.mode === mode)?.rank || 0;
+    const totalPlayers = entries.filter(e => e.mode === mode).length;
+    return { newRank: myRank, totalPlayers };
   },
 
   syncCurrentUserToLeaderboard(profile: UserProfile): void {
     const entries = this.getLeaderboard();
-    const currentUser = entries.find(e => e.isCurrentUser);
-    if (currentUser) {
-      currentUser.nickname = profile.nickname;
-      currentUser.schoolName = profile.schoolName;
-      currentUser.gradeClass = profile.gradeClass;
-      currentUser.title = profile.title;
+    const mine = entries.filter(e => e.isCurrentUser);
+    if (mine.length) {
+      for (const currentUser of mine) {
+        currentUser.nickname = profile.nickname;
+        currentUser.schoolName = profile.schoolName;
+        currentUser.gradeClass = profile.gradeClass;
+        currentUser.title = profile.title;
+      }
       this.saveLeaderboard(entries);
       this.markPendingSync('profile');
     }
