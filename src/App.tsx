@@ -222,18 +222,15 @@ export default function App() {
       : Math.min(95, Math.round((result.score / 1500) * 100));
 
     // Record score on leaderboard
-    const { newRank } = storageService.recordQuizScore(
-      result.score,
-      result.accuracy,
-      result.maxCombo,
-      quizConfig?.mode || 'adaptive',
-      {
-        timeTakenSeconds: result.timeTakenSeconds,
-        speedPerQuestion: result.speedPerQuestion,
-        escapeFloor: result.escapeFloor,
-        escapeRate
-      }
-    );
+    // 단원 학습은 경험치와 진도에만 반영합니다.
+    // 학급 랭킹에는 레벨업/60초 미궁의 최고 점수만 각각 별도로 남깁니다.
+    const { newRank } = quizConfig?.mode === 'adaptive'
+      ? storageService.recordQuizScore(
+          result.score, result.accuracy, result.maxCombo, 'adaptive',
+          { timeTakenSeconds: result.timeTakenSeconds, speedPerQuestion: result.speedPerQuestion,
+            escapeFloor: result.escapeFloor, escapeRate }
+        )
+      : { newRank: undefined };
 
     checkAchievements(profile, result.maxCombo, result.score, quizConfig?.mode || 'adaptive');
     setUserProfile({ ...profile });
