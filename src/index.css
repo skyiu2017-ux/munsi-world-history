@@ -1,0 +1,100 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    font-family: 'Noto Sans KR', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+  
+  h1, h2, h3, .font-display {
+    font-family: 'Plus Jakarta Sans', 'Noto Sans KR', sans-serif;
+  }
+
+  .font-serif-heading {
+    font-family: 'Cinzel', 'Noto Sans KR', serif;
+  }
+
+  .font-pixel {
+    font-family: 'DotGothic16', monospace;
+  }
+
+  .font-pixel-heading {
+    font-family: 'Press Start 2P', 'DotGothic16', monospace;
+  }
+}
+
+/* Pixel Art Utilities & Animations */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+@keyframes pixel-run {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-3px) rotate(2deg); }
+  50% { transform: translateY(0) rotate(0deg); }
+  75% { transform: translateY(-3px) rotate(-2deg); }
+}
+
+@keyframes sweat-fly {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+  40% { opacity: 1; transform: translate(6px, -4px) scale(1.1); }
+  100% { opacity: 0; transform: translate(14px, 4px) scale(0.4); }
+}
+
+@keyframes torch-flicker {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.95); }
+}
+
+@keyframes floor-run {
+  0% { background-position: 0 0; }
+  100% { background-position: -48px 0; }
+}
+
+.animate-pixel-run {
+  animation: pixel-run 0.35s infinite ease-in-out;
+}
+
+.animate-sweat {
+  animation: sweat-fly 0.6s infinite ease-out;
+}
+
+.animate-sweat-delayed {
+  animation: sweat-fly 0.6s 0.3s infinite ease-out;
+}
+
+.animate-torch {
+  animation: torch-flicker 0.4s infinite alternate ease-in-out;
+}
+
+.animate-floor {
+  animation: floor-run 0.5s linear infinite;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(140, 120, 100, 0.25);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 120, 100, 0.4);
+}
+
+/* Two hearts or fewer: the explorer visibly shivers with fear. */
+@keyframes pixel-tremble {
+  0%,100% { transform: translate(0,0) rotate(0deg); }
+  20% { transform: translate(-2px,1px) rotate(-3deg); }
+  40% { transform: translate(2px,-1px) rotate(2deg); }
+  60% { transform: translate(-2px,-1px) rotate(-2deg); }
+  80% { transform: translate(2px,1px) rotate(3deg); }
+}
+.animate-pixel-tremble { animation: pixel-tremble 0.18s infinite steps(2,end); transform-origin: center bottom; }
+@media (prefers-reduced-motion: reduce) { .animate-pixel-tremble { animation: none; } }

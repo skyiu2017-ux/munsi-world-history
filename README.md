@@ -1,18 +1,20 @@
-# 문시중 세계사 학습 웹앱
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+</div>
 
-React + Vite 기반 세계사 학습 퀴즈 웹앱입니다.
+# Run and deploy your AI Studio app
 
-## 배포
+This contains everything you need to run your app locally.
 
-GitHub Pages는 `.github/workflows/deploy.yml`을 통해 `main` 브랜치에 푸시할 때 자동으로 빌드·배포합니다.
+View your app in AI Studio: https://ai.studio/apps/25a27a8c-4ff6-470b-bbc4-f2f4b0572fe2
 
-배포 주소: https://skyiu2017-ux.github.io/munsi-world-history/
+## Run Locally
 
-## 설치
+**Prerequisites:**  Node.js
 
-```bash
-npm install
-npm run build
-```
 
-`Settings > Pages > Build and deployment > Source`에서 `GitHub Actions`를 선택하세요.
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

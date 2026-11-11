@@ -1,0 +1,6 @@
+{
+  "name": "중3 세계사 마스터 - 퀴즈 & 랭킹 배틀",
+  "description": "중학교 3학년 세계사 전 범위(4대 문명부터 제국주의까지) 핵심 개념 복습, 적응형 난이도 퀴즈, 스피드 배틀 및 학급 랭킹 시스템",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
