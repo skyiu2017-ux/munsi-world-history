@@ -50,8 +50,8 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   const [shuffledList, setShuffledList] = useState<Question[]>([]);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
 
-  // 100m 탈출로: 정답마다 10m 전진, 정답 10개에 탈출.
-  const [distanceToExit, setDistanceToExit] = useState<number>(100);
+  // 120m 탈출로: 정답마다 10m 전진, 정답 12개에 탈출.
+  const [distanceToExit, setDistanceToExit] = useState<number>(120);
 
   // Time tracking
   const [startTime, setStartTime] = useState<number>(0);
@@ -77,7 +77,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
     setMaxCombo(0);
     setCorrectCount(0);
     setTotalAnswered(0);
-    setDistanceToExit(100);
+    setDistanceToExit(120);
     startedAt.current = Date.now();
     lastAnswerAt.current = startedAt.current;
     endedRef.current = false;
@@ -224,7 +224,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   // 반드시 출구에 도착해야 성공. 남은 거리만 가까운 상태로는 성공하지 않습니다.
   const isEscaped = !failReason && distanceToExit <= 0;
   const danger = Math.max(0, Math.min(1, (60 - timeLeft) / 60));
-  const heroPosition = 28 + ((100 - distanceToExit) / 100) * 37;
+  const heroPosition = 28 + ((120 - distanceToExit) / 120) * 37;
   // 처음부터 보이도록 왼쪽에 두고, 답을 선택하지 않은 시간이 길수록 탐험가 쪽으로 전진.
   const monsterPosition = Math.min(heroPosition - 5, 0 + danger * 20 + (idleSeconds / 20) * 16);
   const escapeFloor = isEscaped 
@@ -252,7 +252,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
             땀을 흘리며 던전을 질주하라!
           </h2>
           <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed max-w-lg mx-auto">
-            어두운 지하 미궁에 갇힌 탐험가가 탈출구(100m)를 향해 전력 질주합니다!<br />
+            어두운 지하 미궁에 갇힌 탐험가가 탈출구(120m)를 향해 전력 질주합니다!<br />
             정답을 맞힐수록 출구에 가까워집니다. 시간이 흐를수록 뒤에서 거대한 푸른 괴물의 손이 다가옵니다.
           </p>
         </div>
@@ -264,11 +264,11 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">1.</span>
-            <span>정답마다 출구까지 10m 전진합니다. 정답 10개를 맞혀야 탈출합니다.</span>
+            <span>정답마다 출구까지 10m 전진합니다. 정답 12개를 맞혀야 탈출합니다.</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">2.</span>
-            <span>60초 안에 정답 10개를 맞히고 출구에 도착하면 성공입니다. 콤보는 점수를 높입니다.</span>
+            <span>60초 안에 정답 12개를 맞히고 출구에 도착하면 성공입니다. 콤보는 점수를 높입니다.</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">3.</span>
