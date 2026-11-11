@@ -253,6 +253,9 @@ export const storageService = {
     if (!isRemoteEnabled()) return 'disabled';
     const playerId = this.getPlayerId();
     try {
+      // 옛 서버에는 모드 정보가 없어 두 게임의 점수가 섞일 수 있습니다.
+      // 서버 버전부터 확인하고, 오래된 경우 로컬 기록을 보존합니다.
+      await fetchRemoteLeaderboard();
       const raw = localStorage.getItem(STORAGE_KEYS.PENDING_SYNC) || '';
       const pending: string[] = raw.startsWith('[') ? JSON.parse(raw) : [];
       const mine = this.getLeaderboard().filter(e => e.isCurrentUser && (e.mode === 'adaptive' || e.mode === 'speed'));
