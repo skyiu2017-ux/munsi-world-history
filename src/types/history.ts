@@ -52,6 +52,7 @@ export interface WrongNoteItem {
 
 export interface LeaderboardEntry {
   id: string;
+  mode?: 'adaptive' | 'speed' | 'legacy'; // 서로 다른 퀴즈의 최고 기록 분리
   rank: number;
   nickname: string;
   schoolName: string;
