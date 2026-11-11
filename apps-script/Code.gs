@@ -43,7 +43,7 @@ function doGet() {
           updatedAt: r[12] instanceof Date ? r[12].toISOString() : String(r[12])
         };
       });
-    return json_({ ok: true, entries: entries });
+    return json_({ ok: true, version: 2, entries: entries });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
   }
