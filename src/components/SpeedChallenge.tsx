@@ -50,7 +50,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   const [shuffledList, setShuffledList] = useState<Question[]>([]);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
 
-  // Distance to dungeon exit (starts at 100m, each correct moves 8m closer!)
+  // 100m 탈출로: 정답마다 12m 전진. 8문항 정답이면 출구 4m 앞까지 접근.
   const [distanceToExit, setDistanceToExit] = useState<number>(100);
 
   // Time tracking
@@ -125,8 +125,8 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
       const nextCorrect = correctCount + 1;
       setCorrectCount(nextCorrect);
 
-      // Advance towards dungeon exit (8m per correct answer)
-      const newDistance = Math.max(0, distanceToExit - 8);
+      // 정답마다 출구까지 12m 전진
+      const newDistance = Math.max(0, distanceToExit - 12);
       setDistanceToExit(newDistance);
 
       // Score bonus with combo
@@ -235,7 +235,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">1.</span>
-            <span>정답을 맞힐 때마다 출구까지 8m씩 전력 질주합니다.</span>
+            <span>정답을 맞힐 때마다 출구까지 12m씩 전력 질주합니다. (8개 정답이면 출구 4m 앞)</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">2.</span>
