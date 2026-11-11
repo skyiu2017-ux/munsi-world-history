@@ -13,4 +13,4 @@ export const isValidClass = (gradeClass: string): boolean => CLASSES_LIST.includ
 // 학급 랭킹 공용 저장소(Google Sheets + Apps Script) 웹 앱 URL.
 // apps-script/Code.gs 를 배포한 뒤 받은 .../exec 주소를 아래 따옴표 안에 붙여넣으세요.
 // 비워 두면 랭킹은 각 기기에만 저장됩니다.
-export const SHEETS_API_URL = '';
+export const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbxEzHO0H1dQ2NL0mGAGCt6paEd7hSWiUyQX6-wTvlNlcD7pTJJNIpY1kBrs3DM98W63xw/exec';
