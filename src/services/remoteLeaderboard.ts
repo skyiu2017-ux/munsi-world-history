@@ -23,6 +23,7 @@ export async function fetchRemoteLeaderboard(): Promise<LeaderboardEntry[]> {
 
   return data.entries.map((e: any): LeaderboardEntry => ({
     id: String(e.id),
+    mode: e.mode === 'adaptive' || e.mode === 'speed' ? e.mode : 'legacy',
     rank: 0,
     nickname: String(e.nickname ?? ''),
     schoolName: SCHOOL_NAME,
@@ -49,6 +50,7 @@ export async function submitRemoteEntry(entry: LeaderboardEntry, played: boolean
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({
       id: entry.id,
+      mode: entry.mode === 'speed' ? 'speed' : 'adaptive',
       nickname: entry.nickname,
       gradeClass: entry.gradeClass,
       studentName,
