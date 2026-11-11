@@ -111,6 +111,22 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     setStartTime(Date.now());
   }, [config, questions]);
 
+  // 다음 묶음은 다섯 문제를 남겼을 때 미리 채웁니다.
+  // 학생이 '20문항 종료'를 의식하지 않고 자연스럽게 다음 문제로 이어갑니다.
+  useEffect(() => {
+    if (config.mode !== 'adaptive' || correctCount >= 20 || activeQuestionList.length === 0) return;
+    if (currentIndex < activeQuestionList.length - 6) return;
+    if (failureReason) return;
+    setActiveQuestionList(previous => {
+      if (currentIndex < previous.length - 6) return previous;
+      const seen = new Set(previous.map(q => q.id));
+      const additional = shuffleArray(questions.filter(q => !seen.has(q.id))).slice(0, 20);
+      return additional.length
+        ? [...previous, ...shuffleQuestionOptionsBalanced(additional)]
+        : previous;
+    });
+  }, [config.mode, currentIndex, correctCount, activeQuestionList.length, failureReason, questions]);
+
   const currentQ = activeQuestionList[currentIndex];
 
   // Timer countdown
@@ -295,7 +311,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       if (fresh.length > 0) {
         setActiveQuestionList(prev => [...prev, ...shuffleQuestionOptionsBalanced(fresh)]);
         setCurrentIndex(prev => prev + 1);
-        setDifficultyChangeNotice('남은 층에 도전! 다른 문제 20개로 계속 진행합니다. (에너지 유지)');
+        // 다음 문항을 끊김 없이 이어서 제공합니다.
         return;
       }
     }
@@ -372,7 +388,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         <div className="flex items-center gap-3">
           <div className="flex flex-col">
             <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400">
-              문제 {currentIndex + 1} / {activeQuestionList.length}
+              {isAdaptive ? `도전 ${currentIndex + 1}번째 문제 · 1층까지 정답 ${Math.max(0, 20 - correctCount)}개` : `문제 ${currentIndex + 1} / ${activeQuestionList.length}`}
             </span>
             <span className="text-xs font-bold text-stone-900 dark:text-stone-100 truncate max-w-[200px]">
               {currentQ.chapterTitle}
@@ -608,7 +624,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
                 onClick={handleNextQuestion}
                 className="px-6 py-2.5 text-xs font-bold rounded-xl bg-amber-700 hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white shadow-xs transition-colors flex items-center gap-2"
               >
-                <span>{isAdaptive && correctCount >= 20 ? '1층 탈출 결과 보기' : currentIndex + 1 < activeQuestionList.length ? '다음 문제로' : isAdaptive ? '다음 20문항으로 계속 도전' : '결과 확인하기'}</span>
+                <span>{isAdaptive && correctCount >= 20 ? '1층 탈출 결과 보기' : currentIndex + 1 < activeQuestionList.length ? '다음 문제로' : isAdaptive ? '다음 문제로' : '결과 확인하기'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
