@@ -1,10 +1,8 @@
 /**
- * Quiz utility functions for randomizing questions and options
+ * Quiz utility functions for randomizing questions and answer options.
+ * The answer position is balanced in short sessions, without changing the answer itself.
  */
 
-/**
- * Fisher-Yates shuffle an array into a new array
- */
 export function shuffleArray<T>(array: T[]): T[] {
   const result = [...array];
   for (let i = result.length - 1; i > 0; i--) {
@@ -14,51 +12,72 @@ export function shuffleArray<T>(array: T[]): T[] {
   return result;
 }
 
-/**
- * Shuffles the answer options of a question completely randomly,
- * updating the correctIndex to point to the new location of the correct answer.
- * Works seamlessly with 4-choice (1~4) and 5-choice (1~5) questions.
- */
-export function shuffleQuestionOptions<T extends { options: string[]; correctIndex: number }>(question: T): T {
-  if (!question || !question.options || question.options.length <= 1) {
+/** Move the one correct answer to a random (or designated) slot,
+ *  and randomly shuffle all remaining distractors. */
+export function shuffleQuestionOptions<T extends { options: string[]; correctIndex: number }>(
+  question: T,
+  targetCorrectIndex?: number
+): T {
+  if (!question || !Array.isArray(question.options) || question.options.length <= 1) {
     return question;
   }
-
-  // Preserve the correct answer text before shuffling
-  const correctText = question.options[question.correctIndex];
-
-  // Map each option with its correctness flag
-  const indexed = question.options.map((opt, idx) => ({
-    opt,
-    isCorrect: idx === question.correctIndex
-  }));
-
-  // Fisher-Yates shuffle
-  for (let i = indexed.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const temp = indexed[i];
-    indexed[i] = indexed[j];
-    indexed[j] = temp;
+  if (!Number.isInteger(question.correctIndex) ||
+      question.correctIndex < 0 || question.correctIndex >= question.options.length) {
+    throw new Error('Invalid correctIndex in question');
+  }
+  const n = question.options.length;
+  const position = targetCorrectIndex === undefined
+    ? Math.floor(Math.random() * n)
+    : targetCorrectIndex;
+  if (!Number.isInteger(position) || position < 0 || position >= n) {
+    throw new Error('Invalid target correct answer position');
   }
 
-  const newOptions = indexed.map(item => item.opt);
-  let newCorrectIndex = indexed.findIndex(item => item.isCorrect);
-
-  // Fallback check by text comparison if index search failed
-  if (newCorrectIndex === -1 && correctText !== undefined) {
-    newCorrectIndex = newOptions.indexOf(correctText);
+  const answer = question.options[question.correctIndex];
+  const distractors = shuffleArray(
+    question.options.filter((_, index) => index !== question.correctIndex)
+  );
+  const options: string[] = [];
+  let wrongIndex = 0;
+  for (let index = 0; index < n; index++) {
+    options.push(index === position ? answer : distractors[wrongIndex++]);
   }
-
-  return {
-    ...question,
-    options: newOptions,
-    correctIndex: newCorrectIndex >= 0 ? newCorrectIndex : 0
-  };
+  return { ...question, options, correctIndex: position };
 }
 
-/**
- * Shuffles an array of questions AND shuffles each question's options
+/** For every consecutive set of four 4-choice questions, put the correct
+ *  answer in positions 1, 2, 3, 4 exactly once each in a random order.
+ *  The final incomplete set is also randomized. This prevents long runs
+ *  of answer 1 (and applies equally to speed, chapter, and level-up modes).
  */
-export function shuffleQuestionsAndOptions<T extends { options: string[]; correctIndex: number }>(questions: T[]): T[] {
-  return shuffleArray(questions).map(q => shuffleQuestionOptions(q));
+export function shuffleQuestionOptionsBalanced<T extends { options: string[]; correctIndex: number }>(
+  questions: T[]
+): T[] {
+  const result: T[] = [];
+  let previous: number | undefined;
+  let i = 0;
+  while (i < questions.length) {
+    const count = questions[i].options.length;
+    let end = i + 1;
+    while (end < questions.length && questions[end].options.length === count && end - i < count) {
+      end++;
+    }
+    const group = shuffleArray(Array.from({ length: count }, (_, k) => k)).slice(0, end - i);
+    if (group.length > 1 && previous !== undefined && group[0] === previous) {
+      const swap = group.findIndex(p => p !== previous);
+      [group[0], group[swap]] = [group[swap], group[0]];
+    }
+    for (let k = i; k < end; k++) {
+      result.push(shuffleQuestionOptions(questions[k], group[k - i]));
+    }
+    previous = group[group.length - 1];
+    i = end;
+  }
+  return result;
+}
+
+export function shuffleQuestionsAndOptions<T extends { options: string[]; correctIndex: number }>(
+  questions: T[]
+): T[] {
+  return shuffleQuestionOptionsBalanced(shuffleArray(questions));
 }
