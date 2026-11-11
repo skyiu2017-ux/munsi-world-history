@@ -12,6 +12,7 @@ interface LeaderboardViewProps {
   userProfile: UserProfile;
   onUpdateProfile: (nickname: string, schoolName: string, gradeClass: string) => void;
   onStartChallenge: () => void;
+  onStartLevelUp: () => void;
   remoteEnabled: boolean;
   syncState: 'idle' | 'syncing' | 'error';
   onRefresh: () => void;
@@ -22,12 +23,15 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   userProfile,
   onUpdateProfile,
   onStartChallenge,
+  onStartLevelUp,
   remoteEnabled,
   syncState,
   onRefresh
 }) => {
   // Class selection: 'all' | 'tournament' | '3학년 1반' | '3학년 2반' | '3학년 3반' | '3학년 4반'
   const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [selectedMode, setSelectedMode] = useState<'adaptive' | 'speed'>('adaptive');
+  const gameEntries = entries.filter(e => e.mode === selectedMode);
   const [sortMetric, setSortMetric] = useState<'score' | 'speed' | 'combo'>('score');
   
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
@@ -43,11 +47,11 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
   // Compute Class Tournament Stats (플레이 기록이 있는 학급만 순위에 포함)
   const classStats = CLASSES_LIST.map(cls => {
-    const classMembers = entries.filter(e => e.gradeClass === cls);
+    const classMembers = gameEntries.filter(e => e.gradeClass === cls);
     const count = classMembers.length;
     const totalScore = classMembers.reduce((sum, m) => sum + m.score, 0);
     const avgScore = count > 0 ? Math.round(totalScore / count) : 0;
-    const escapes = classMembers.filter(m => (m.escapeRate ?? 0) >= 100 || m.escapeFloor?.includes('지상 탈출')).length;
+    const escapes = classMembers.filter(m => (m.escapeRate ?? 0) >= 100 || m.escapeFloor?.includes('탈출 성공')).length;
     const bestStudent = [...classMembers].sort((a, b) => b.score - a.score)[0];
     const fastestStudent = classMembers
       .filter(m => m.timeTakenSeconds)
@@ -67,7 +71,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
     .sort((a, b) => b.avgScore - a.avgScore);
 
   // Filter list by selected class
-  let displayedList = [...entries];
+  let displayedList = [...gameEntries];
   if (selectedClass !== 'all' && selectedClass !== 'tournament') {
     displayedList = displayedList.filter(e => e.gradeClass === selectedClass);
   }
@@ -94,7 +98,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   }
 
   // Find user entry
-  const myEntry = entries.find(e => e.isCurrentUser);
+  const myEntry = gameEntries.find(e => e.isCurrentUser);
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -113,7 +117,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                 <span>CLASS WORLD HISTORY BATTLE</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white font-display">
-                각 학급별 세계사 랭킹 & 미궁 탈출전
+                각 학급별 세계사 랭킹 · 게임별 순위
               </h2>
               <p className="text-xs text-stone-400">
                 우리 반 친구들과 순위를 겨루고, 다른 반과의 학급 대항전에서 1위를 차지해보세요!
@@ -123,15 +127,24 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
           {/* Quick Action Button */}
           <button
-            onClick={onStartChallenge}
+            onClick={selectedMode === 'adaptive' ? onStartLevelUp : onStartChallenge}
             className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-pixel text-xs tracking-wider font-bold shadow-lg hover:shadow-amber-900/30 transition-all flex items-center gap-2 shrink-0"
           >
             <DoorOpen className="w-4 h-4" />
-            <span>60초 미궁 탈출 도전!</span>
+            <span>{selectedMode === 'adaptive' ? '레벨업 퀴즈 도전!' : '60초 미궁 탈출 도전!'}</span>
           </button>
         </div>
       </div>
 
+      {/* 독립된 두 개의 학급/개인 랭킹 */}
+      <div className="flex gap-2 flex-wrap bg-stone-100 dark:bg-stone-900 p-2 rounded-xl" role="tablist" aria-label="게임별 랭킹 선택">
+        <button type="button" role="tab" aria-selected={selectedMode === 'adaptive'}
+          onClick={() => { setSelectedMode('adaptive'); setSortMetric('score'); }}
+          className={`flex-1 min-w-[145px] rounded-lg px-4 py-3 text-sm font-bold ${selectedMode === 'adaptive' ? 'bg-amber-700 text-white' : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200'}`}>레벨업 퀴즈 랭킹</button>
+        <button type="button" role="tab" aria-selected={selectedMode === 'speed'}
+          onClick={() => { setSelectedMode('speed'); setSortMetric('speed'); }}
+          className={`flex-1 min-w-[145px] rounded-lg px-4 py-3 text-sm font-bold ${selectedMode === 'speed' ? 'bg-blue-700 text-white' : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200'}`}>60초 미궁 탈출 랭킹</button>
+      </div>
       {/* Header and User Quick Summary */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-2 border-b border-stone-200 dark:border-stone-800">
         <div>
@@ -147,7 +160,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               : `${selectedClass} 랭킹`}
           </h3>
           <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
-            반별 평균 점수, 탈출 성공자 수, 그리고 개인별 최고 속도 기록을 비교할 수 있습니다.
+            레벨업 퀴즈와 60초 미궁 탈출 기록을 따로 집계합니다. 같은 학생은 게임별 최고 점수만 반영됩니다.
           </p>
         </div>
 
@@ -495,7 +508,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                     const isTop2 = rankNumber === 2;
                     const isTop3 = rankNumber === 3;
                     const isSelf = entry.isCurrentUser;
-                    const isEscaped = (entry.escapeRate ?? 0) >= 100 || entry.escapeFloor?.includes('지상 탈출');
+                    const isEscaped = (entry.escapeRate ?? 0) >= 100 || entry.escapeFloor?.includes('탈출 성공');
 
                     return (
                       <tr
