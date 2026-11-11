@@ -175,7 +175,7 @@ export default function App() {
       mode: 'chapter',
       chapterId,
       initialDifficulty: difficulty,
-      questionCount: 4
+      questionCount: 5
     });
     setCurrentTab('quizSession');
   };
