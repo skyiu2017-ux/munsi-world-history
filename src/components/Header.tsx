@@ -91,6 +91,15 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Zone 3: 1 Primary Action & Utilities */}
         <div className="flex items-center gap-2.5 shrink-0">
+          <a
+            href="https://skyiu2017-ux.github.io/history-class/"
+            title="문시중 역사 포털로 돌아가기"
+            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-semibold text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/50 transition-colors"
+          >
+            <BookOpen className="h-4 w-4" />
+            <span className="hidden lg:inline">역사 포털</span>
+          </a>
+
           {/* Daily Keyword Quiz Button */}
           <button
             onClick={onOpenDailyQuiz}
