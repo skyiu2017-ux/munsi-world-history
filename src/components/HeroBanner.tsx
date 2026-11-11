@@ -48,7 +48,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
 
             <p className="text-stone-600 dark:text-stone-300 text-base sm:text-lg leading-relaxed max-w-2xl">
               4대 문명의 탄생부터 페르시아, 진·한, 그리스·로마, 중세 봉건제, 교황권과 십자군, 르네상스, 종교개혁, 신항로 개척, 프랑스 혁명, 산업 혁명, 제국주의까지!
-              지하 미궁에 갇힌 역사 탐험가가 되어 문제를 풀고 지상으로 탈출하세요. 적응형 퀴즈와 60초 스피드 탈출 랭킹으로 친구들과 실시간 경쟁할 수 있습니다.
+              지하 미궁에 갇힌 역사 탐험가가 되어 문제를 풀고 지상으로 탈출하세요. 레벨업 퀴즈(20문항씩 1층 탈출 도전)와 60초 스피드 탈출 랭킹으로 친구들과 실시간 경쟁할 수 있습니다.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -57,7 +57,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 className="px-5 py-3 text-sm font-semibold rounded-xl bg-amber-700 hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white shadow-sm hover:shadow transition-all flex items-center gap-2 group whitespace-nowrap"
               >
                 <Sparkles className="w-4 h-4 text-amber-200" />
-                <span>적응형 레벨업 퀴즈</span>
+                <span>레벨업 퀴즈 (탈출해보자!)</span>
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
 
@@ -119,7 +119,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               <Zap className="w-4 h-4" />
             </div>
             <div>
-              <div className="font-semibold text-stone-900 dark:text-stone-100">동적 적응형 난이도</div>
+              <div className="font-semibold text-stone-900 dark:text-stone-100">레벨업 퀴즈</div>
               <div className="text-stone-500 dark:text-stone-400">초급 · 중급 · 고급 실시간 전환</div>
             </div>
           </div>
