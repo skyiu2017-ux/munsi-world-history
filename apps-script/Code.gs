@@ -143,8 +143,19 @@ function doPost(e) {
   }
 }
 
+// 처음 설치할 때 Apps Script 편집기에서 이 함수를 한 번 실행하세요.
+// '랭킹' 시트가 생기는지 확인하면 권한과 연결 스프레드시트를 구별할 수 있습니다.
+function setupRankingSheet() {
+  const sheet = getSheet_();
+  Logger.log('랭킹 시트 연결 완료: ' + sheet.getParent().getUrl());
+  return sheet.getParent().getUrl();
+}
+
 function getSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    throw new Error('연결된 스프레드시트가 없습니다. 반드시 해당 Google 시트의 [확장 프로그램 → Apps Script]에서 스크립트를 생성하세요.');
+  }
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) {
     sh = ss.insertSheet(SHEET_NAME);
