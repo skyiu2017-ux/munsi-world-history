@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 import { DungeonProgressBar, PixelExplorer } from './PixelExplorer';
-import { shuffleArray, shuffleQuestionOptions } from '../utils/quizUtils';
+import { shuffleArray, shuffleQuestionOptions, shuffleQuestionOptionsBalanced } from '../utils/quizUtils';
 
 interface QuizEngineProps {
   questions: Question[];
@@ -90,7 +90,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     // 적응형 첫 문제는 반드시 초급으로 시작하고, 이후 실력에 따라 난이도를 조정한다.
     const firstEasy = config.mode === 'adaptive' ? shuffled.find(q => q.difficulty === '초급') : undefined;
     const orderedPool = firstEasy ? [firstEasy, ...shuffled.filter(q => q.id !== firstEasy.id)] : shuffled;
-    const finalizedQuestions = orderedPool.slice(0, targetLength).map(q => shuffleQuestionOptions(q));
+    const finalizedQuestions = shuffleQuestionOptionsBalanced(orderedPool.slice(0, targetLength));
     setActiveQuestionList(finalizedQuestions);
     setCurrentIndex(0);
     setScore(0);
@@ -246,7 +246,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       const updatedRemaining = nextRemaining.map((q, i) => {
         // 대체할 새 문항이 없으면 원래 문제를 유지합니다. 같은 회차 중복 출제 금지.
         const replacement = available[i] || q;
-        return replacement === q ? q : shuffleQuestionOptions(replacement);
+        return replacement === q ? q : shuffleQuestionOptions(replacement, q.correctIndex);
       });
       return [...prevList.slice(0, currentIndex + 1), ...updatedRemaining];
     });
@@ -293,7 +293,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       const used = new Set(activeQuestionList.map(q => q.id));
       const fresh = shuffleArray(questions.filter(q => !used.has(q.id))).slice(0, 20);
       if (fresh.length > 0) {
-        setActiveQuestionList(prev => [...prev, ...fresh.map(q => shuffleQuestionOptions(q))]);
+        setActiveQuestionList(prev => [...prev, ...shuffleQuestionOptionsBalanced(fresh)]);
         setCurrentIndex(prev => prev + 1);
         setDifficultyChangeNotice('남은 층에 도전! 다른 문제 20개로 계속 진행합니다. (에너지 유지)');
         return;
