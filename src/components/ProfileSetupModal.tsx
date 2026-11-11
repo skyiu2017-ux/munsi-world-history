@@ -4,19 +4,22 @@ import { SCHOOL_NAME, CLASSES_LIST } from '../data/schoolConfig';
 
 interface ProfileSetupModalProps {
   defaultNickname: string;
-  onSubmit: (nickname: string, gradeClass: string) => void;
+  onSubmit: (nickname: string, gradeClass: string, studentName: string, studentNumber: number) => void;
 }
 
 export const ProfileSetupModal: React.FC<ProfileSetupModalProps> = ({ defaultNickname, onSubmit }) => {
   const [nickname, setNickname] = useState<string>(defaultNickname === '세계사탐험가' ? '' : defaultNickname);
   const [gradeClass, setGradeClass] = useState<string>('');
-
-  const canSubmit = nickname.trim().length > 0 && gradeClass !== '';
+  const [studentName, setStudentName] = useState('');
+  const [numberText, setNumberText] = useState('');
+  const studentNumber = Number(numberText);
+  const canSubmit = nickname.trim().length > 0 && gradeClass !== '' && studentName.trim().length >= 2 &&
+    /^\d{1,2}$/.test(numberText) && studentNumber >= 1 && studentNumber <= 45;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    onSubmit(nickname.trim(), gradeClass);
+    onSubmit(nickname.trim(), gradeClass, studentName.trim(), studentNumber);
   };
 
   return (
@@ -32,7 +35,7 @@ export const ProfileSetupModal: React.FC<ProfileSetupModalProps> = ({ defaultNic
           </div>
           <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">탐험가 정보를 입력해주세요</h2>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            선택한 학급으로 학급 랭킹에 기록됩니다. 나중에 프로필에서 바꿀 수 있어요.
+            학년·반·번호로 중복 기록을 방지합니다. 이름은 교사 확인용으로만 보관되며 공개 랭킹에는 닉네임만 표시됩니다.
           </p>
         </div>
 
@@ -50,7 +53,7 @@ export const ProfileSetupModal: React.FC<ProfileSetupModalProps> = ({ defaultNic
             value={nickname}
             onChange={e => setNickname(e.target.value)}
             maxLength={12}
-            placeholder="예: 3101 김하늘"
+            placeholder="예: 시간여행자"
             className="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 text-stone-900 dark:text-stone-100"
             required
           />
@@ -76,8 +79,23 @@ export const ProfileSetupModal: React.FC<ProfileSetupModalProps> = ({ defaultNic
           </div>
         </div>
 
+        <div className="grid grid-cols-[1fr_90px] gap-3">
+          <div>
+            <label className="text-xs text-stone-600 dark:text-stone-300 block mb-1">실제 이름 (교사용 · 공개 안 됨)</label>
+            <input type="text" value={studentName} onChange={e => setStudentName(e.target.value)}
+              maxLength={20} autoComplete="name" placeholder="실제 이름"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-stone-900 dark:text-white" required />
+          </div>
+          <div>
+            <label className="text-xs text-stone-600 dark:text-stone-300 block mb-1">출석번호</label>
+            <input type="number" inputMode="numeric" value={numberText} min={1} max={45}
+              onChange={e => setNumberText(e.target.value)} placeholder="예: 17"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-stone-900 dark:text-white" required />
+          </div>
+        </div>
+        <p className="text-[11px] text-stone-500 dark:text-stone-400">같은 반·번호로 다른 이름을 등록하면 서버에서 거절합니다. 다른 사람이 대신 입력할 수 있으므로 공식 시험용 인증을 대체하지는 않습니다.</p>
         <button
-          type="submit"
+          type="submit
           disabled={!canSubmit}
           className="w-full py-2.5 rounded-xl text-sm font-bold bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-40 disabled:cursor-not-allowed"
         >

@@ -41,7 +41,7 @@ export async function fetchRemoteLeaderboard(): Promise<LeaderboardEntry[]> {
 }
 
 // 내 기록 한 줄을 서버에 올립니다. played=true 일 때만 플레이 횟수가 올라가고 새 줄이 만들어집니다.
-export async function submitRemoteEntry(entry: LeaderboardEntry, played: boolean): Promise<boolean> {
+export async function submitRemoteEntry(entry: LeaderboardEntry, played: boolean, studentName: string, studentNumber: number): Promise<boolean> {
   const res = await fetch(API_URL, {
     method: 'POST',
     redirect: 'follow',
@@ -51,6 +51,8 @@ export async function submitRemoteEntry(entry: LeaderboardEntry, played: boolean
       id: entry.id,
       nickname: entry.nickname,
       gradeClass: entry.gradeClass,
+      studentName,
+      studentNumber,
       score: entry.score,
       accuracy: entry.accuracy,
       maxCombo: entry.maxCombo,

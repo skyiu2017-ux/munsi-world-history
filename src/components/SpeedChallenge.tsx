@@ -29,7 +29,9 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'ended'>('ready');
   const [timeLeft, setTimeLeft] = useState<number>(60);
   const [score, setScore] = useState<number>(0);
-  const [hearts, setHearts] = useState<number>(3);
+  const [hearts, setHearts] = useState<number>(5);
+  const [wrongStreak, setWrongStreak] = useState<number>(0);
+  const [failReason, setFailReason] = useState<string | null>(null);
   const answerLock = useRef(false);
   const [combo, setCombo] = useState<number>(0);
   const [maxCombo, setMaxCombo] = useState<number>(0);
@@ -54,7 +56,9 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
     setCurrentQIndex(0);
     setTimeLeft(60);
     setScore(0);
-    setHearts(3);
+    setHearts(5);
+    setWrongStreak(0);
+    setFailReason(null);
     answerLock.current = false;
     setCombo(0);
     setMaxCombo(0);
@@ -87,7 +91,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
 
   const endChallenge = () => {
     setGameState('ended');
-    confetti({
+    if (distanceToExit <= 0) confetti({
       particleCount: 100,
       spread: 80,
       origin: { y: 0.6 }
@@ -105,6 +109,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
 
     if (isCorrect) {
       setFeedback('correct');
+      setWrongStreak(0);
       const nextCombo = combo + 1;
       setCombo(nextCombo);
       if (nextCombo > maxCombo) setMaxCombo(nextCombo);
@@ -148,8 +153,11 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
       setCombo(0);
       storageService.addWrongNote(currentQ, selectedIdx);
       const remaining = Math.max(0, hearts - 1);
+      const nextStreak = wrongStreak + 1;
+      setWrongStreak(nextStreak);
       setHearts(remaining);
-      if (remaining === 0) {
+      if (remaining === 0 || nextStreak >= 3) {
+        setFailReason(remaining === 0 ? '누적 오답 5회: 에너지 소진' : '연속 오답 3회: 도전 실패');
         clearInterval(timerRef.current);
         setFinalTimeSeconds(Math.min(60, Number(((Date.now() - startTime) / 1000).toFixed(1))));
         setTimeout(() => endChallenge(), 350);
@@ -226,7 +234,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">4.</span>
-            <span>도전할 때마다 56개 전 단원 문제와 선지(1~4번)가 매번 완전히 다르게 랜덤 출제됩니다.</span>
+            <span>전 단원 문제와 선지가 무작위로 출제됩니다. 에너지 5칸, 누적 오답 5회 또는 연속 오답 3회면 실패합니다.</span>
           </div>
         </div>
 
@@ -263,7 +271,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           <p className="text-sm text-stone-600 dark:text-stone-400">
             {isEscaped 
               ? `놀라운 순발력! ${finalTimeSeconds}초 만에 던전을 완벽 탈출했습니다.`
-              : `아쉽게도 시간이 종료되었습니다. 다음 번엔 더 빠르게 달려보세요!`}
+              : failReason || '시간이 종료되었습니다. 다음 번엔 더 빠르게 달려보세요!'}
           </p>
         </div>
 
@@ -373,7 +381,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
       </div>
 
       {/* Real-time Dungeon Running Track with Pixel Explorer Sweating 💦 */}
-      <div className="relative h-28 bg-stone-950 rounded-2xl border-2 border-stone-800 overflow-hidden shadow-inner flex flex-col justify-between p-3 select-none">
+      <div className="relative h-40 bg-stone-950 rounded-2xl border-2 border-stone-800 overflow-hidden shadow-inner flex flex-col justify-between p-3 select-none">
         {/* Stone Dungeon Background Wall with Torches */}
         <div className="flex justify-between items-center px-4">
           <div className="flex items-center gap-1 text-[11px] text-amber-400 font-pixel">
@@ -389,12 +397,12 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-2 py-1" aria-label={`남은 하트 ${hearts}개`}>
-          {[0,1,2].map(i => <span key={i} className={`text-2xl ${i < hearts ? 'opacity-100' : 'opacity-25 grayscale'}`} aria-hidden="true">❤️</span>)}
-          {hearts <= 2 && <span className="text-xs text-rose-300 font-bold">{hearts === 1 ? '위험! 마지막 하트' : '조심! 캐릭터가 떨고 있어요'}</span>}
+        <div className="flex flex-wrap items-center justify-center gap-2 py-1" aria-label={`남은 에너지 ${hearts}/5, 연속 오답 ${wrongStreak}/3`}>
+          <div className="flex gap-1">{[0,1,2,3,4].map(i => <span key={i} className={`text-xl ${i < hearts ? 'opacity-100' : 'opacity-25 grayscale'}`} aria-hidden="true">❤️</span>)}</div>
+          <span className="text-[11px] text-rose-300 font-bold">에너지 {hearts}/5 · 연속 오답 {wrongStreak}/3</span>
         </div>
         {/* Runner Stage & Animated Floor */}
-        <div className="relative h-14 flex items-end">
+        <div className="relative h-24 flex items-end">
           {/* Moving Stone Floor */}
           <div className="absolute bottom-0 left-0 right-0 h-4 bg-stone-800 border-t-2 border-amber-900/60 animate-floor" />
 
@@ -402,7 +410,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           <div 
             className="absolute transition-all duration-300 ease-out"
             style={{
-              left: `calc(${Math.min(82, Math.max(10, ((100 - distanceToExit) / 100) * 82))}% - 24px)`,
+              left: `${Math.max(2, Math.min(52, ((100 - distanceToExit) / 100) * 52))}%`,
               bottom: '2px'
             }}
           >

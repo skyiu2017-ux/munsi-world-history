@@ -5,7 +5,7 @@ import confetti from 'canvas-confetti';
 import { 
   Sparkles, Zap, Award, Flame, Timer, CheckCircle, 
   XCircle, Lightbulb, HelpCircle, ArrowRight, RotateCcw, 
-  TrendingUp, Trophy, ChevronRight, BookOpen
+  TrendingUp, Trophy, ChevronRight, BookOpen, Heart, ShieldAlert
 } from 'lucide-react';
 
 import { DungeonProgressBar, PixelExplorer } from './PixelExplorer';
@@ -57,7 +57,12 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const [hiddenOptions, setHiddenOptions] = useState<number[]>([]);
   const [showHint, setShowHint] = useState<boolean>(false);
   const [lifeline5050Used, setLifeline5050Used] = useState<boolean>(false);
-  const [lifelineHintUsed, setLifelineHintUsed] = useState<boolean>(false);
+  const HINT_LIMIT = 2;
+  const [hintsUsed, setHintsUsed] = useState<number>(0);
+  // 적응형 모드: 누적 5회 또는 연속 3회 오답(시간 초과 포함) 시 도전 종료
+  const [wrongCount, setWrongCount] = useState<number>(0);
+  const [wrongStreak, setWrongStreak] = useState<number>(0);
+  const [failureReason, setFailureReason] = useState<string | null>(null);
 
   // Adaptive Notice
   const [difficultyChangeNotice, setDifficultyChangeNotice] = useState<string | null>(null);
@@ -82,7 +87,10 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     // Shuffle pool & randomize options for every question (1~4, 1~5)
     const shuffled = pool.sort(() => 0.5 - Math.random());
     const targetLength = config.questionCount || (config.mode === 'adaptive' ? 10 : Math.min(8, shuffled.length));
-    const finalizedQuestions = shuffled.slice(0, targetLength).map(q => shuffleQuestionOptions(q));
+    // 적응형 첫 문제는 반드시 초급으로 시작하고, 이후 실력에 따라 난이도를 조정한다.
+    const firstEasy = config.mode === 'adaptive' ? shuffled.find(q => q.difficulty === '초급') : undefined;
+    const orderedPool = firstEasy ? [firstEasy, ...shuffled.filter(q => q.id !== firstEasy.id)] : shuffled;
+    const finalizedQuestions = orderedPool.slice(0, targetLength).map(q => shuffleQuestionOptions(q));
     setActiveQuestionList(finalizedQuestions);
     setCurrentIndex(0);
     setScore(0);
@@ -94,6 +102,12 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     setSelectedOption(null);
     setHiddenOptions([]);
     setShowHint(false);
+    setHintsUsed(0);
+    setLifeline5050Used(false);
+    setWrongCount(0);
+    setWrongStreak(0);
+    setFailureReason(null);
+    setCurrentDifficulty(config.initialDifficulty || '초급');
     setStartTime(Date.now());
   }, [config, questions]);
 
@@ -119,12 +133,24 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   }, [currentIndex, isAnswered, currentQ]);
 
   const handleTimeOut = () => {
-    if (isAnswered) return;
+    if (isAnswered || failureReason) return;
     setIsAnswered(true);
     setCombo(0);
     setTotalAnswered(prev => prev + 1);
-    if (currentQ) {
-      storageService.addWrongNote(currentQ, -1);
+    if (currentQ) storageService.addWrongNote(currentQ, -1);
+    registerWrongAnswer();
+  };
+
+  const registerWrongAnswer = () => {
+    if (config.mode !== 'adaptive') return;
+    const nextWrong = wrongCount + 1;
+    const nextStreak = wrongStreak + 1;
+    setWrongCount(nextWrong);
+    setWrongStreak(nextStreak);
+    if (nextWrong >= 5) {
+      setFailureReason('누적 오답 5회로 에너지가 모두 소진되었습니다.');
+    } else if (nextStreak >= 3) {
+      setFailureReason('3문제를 연속으로 틀려 도전이 종료되었습니다.');
     }
   };
 
@@ -145,7 +171,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   };
 
   const handleSelectOption = (idx: number) => {
-    if (isAnswered || !currentQ) return;
+    if (isAnswered || !currentQ || failureReason) return;
     clearInterval(timerRef.current);
 
     setSelectedOption(idx);
@@ -159,6 +185,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       setCombo(nextCombo);
       if (nextCombo > maxCombo) setMaxCombo(nextCombo);
       setCorrectCount(prev => prev + 1);
+      setWrongStreak(0);
 
       // Score calculation
       const basePoints = 100;
@@ -194,6 +221,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       setCombo(0);
       // Auto add to wrong notes
       storageService.addWrongNote(currentQ, idx);
+      registerWrongAnswer();
 
       // Adaptive downshift if struggling
       if (config.mode === 'adaptive' && currentDifficulty !== '초급') {
@@ -235,12 +263,13 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   };
 
   const useHintLifeline = () => {
-    if (lifelineHintUsed || isAnswered || !currentQ) return;
-    setLifelineHintUsed(true);
+    if (hintsUsed >= HINT_LIMIT || isAnswered || !currentQ || failureReason) return;
+    setHintsUsed(prev => prev + 1);
     setShowHint(true);
   };
 
   const handleNextQuestion = () => {
+    if (failureReason) return;
     setDifficultyChangeNotice(null);
     setHiddenOptions([]);
     setShowHint(false);
@@ -293,6 +322,37 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   }
 
   const isCorrect = selectedOption === currentQ.correctIndex;
+  const isAdaptive = config.mode === 'adaptive';
+  const energy = Math.max(0, 5 - wrongCount);
+
+  if (isAdaptive && failureReason) {
+    return (
+      <section className="max-w-2xl mx-auto px-4 py-10 space-y-5 text-center" role="status" aria-live="polite">
+        <PixelExplorer size="xl" state="trembling" showSweat className="mx-auto" />
+        <h2 className="text-2xl font-extrabold text-rose-700 dark:text-rose-300">도전 실패 · GAME OVER</h2>
+        <p className="font-semibold text-stone-700 dark:text-stone-200">{failureReason}</p>
+        <div className="flex justify-center gap-2" aria-label={`남은 에너지 ${energy}/5`}>
+          {Array.from({ length: 5 }, (_, i) => (
+            <Heart key={i} aria-hidden="true" className={`h-7 w-7 ${i < energy ? 'fill-rose-500 text-rose-500' : 'fill-stone-200 text-stone-400 dark:fill-stone-700'}`} />
+          ))}
+        </div>
+        <div className="rounded-xl border border-stone-200 dark:border-stone-700 p-4 text-sm text-left space-y-2">
+          <p>이번 도전: {totalAnswered}문항 응답 · {correctCount}문항 정답 · {score.toLocaleString()}점</p>
+          <p><span className="font-bold">마지막 문제 해설:</span> {currentQ.explanation}</p>
+        </div>
+        <div className="flex flex-wrap gap-3 justify-center">
+          <button onClick={onExit} className="px-5 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 text-sm font-bold">탐험 화면으로</button>
+          <button onClick={() => {
+            const elapsed = Number(((Date.now() - startTime) / 1000).toFixed(1));
+            onFinishQuiz({score, accuracy: totalAnswered ? Math.round(correctCount / totalAnswered * 100) : 0,
+              maxCombo, totalAnswered, correctCount, timeTakenSeconds: elapsed,
+              speedPerQuestion: totalAnswered ? Number((elapsed / totalAnswered).toFixed(1)) : 0,
+              escapeFloor: '도전 실패'});
+          }} className="px-5 py-2.5 rounded-xl bg-rose-700 text-white text-sm font-bold">결과 기록하고 종료</button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -377,15 +437,32 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
         </div>
       )}
 
+      {/* 적응형 도전 에너지: 누적 5회 또는 연속 3회 오답 시 실패 */}
+      {isAdaptive && (
+        <div className="rounded-xl border border-rose-200 dark:border-rose-900/70 bg-rose-50 dark:bg-rose-950/30 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2" role="status" aria-label={`에너지 ${energy}/5`}>
+            <span className="text-xs font-extrabold text-rose-900 dark:text-rose-200">에너지</span>
+            <div className="flex gap-1">
+              {Array.from({ length: 5 }, (_, i) => (
+                <Heart key={i} aria-hidden="true" className={`h-6 w-6 sm:h-7 sm:w-7 ${i < energy ? 'fill-rose-500 text-rose-500' : 'fill-stone-200 text-stone-400 dark:fill-stone-700'}`} />
+              ))}
+            </div>
+            <span className="text-xs font-mono font-bold text-rose-800 dark:text-rose-200">{energy}/5</span>
+          </div>
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-800 dark:text-rose-200"><ShieldAlert className="h-4 w-4" /> 누적 오답 {wrongCount}/5 · 연속 오답 {wrongStreak}/3</span>
+        </div>
+      )}
+
       {/* Dungeon Escape Progress Bar */}
       <DungeonProgressBar
         currentFloor={correctCount}
         totalFloors={activeQuestionList.length}
         isEscaped={correctCount >= activeQuestionList.length}
+        isInDanger={isAdaptive && energy <= 2}
       />
 
-      {/* Lifeline Buttons */}
-      <div className="flex items-center gap-2 justify-end">
+      {/* 도전당 50:50 찬스 1회 + 역사학자 힌트 2회. 사용 횟수는 다음 문항으로 넘어가도 유지. */}
+      <div className="flex flex-wrap items-center gap-2 justify-end">
         <button
           onClick={use5050Lifeline}
           disabled={lifeline5050Used || isAnswered}
@@ -396,20 +473,20 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
           }`}
         >
           <HelpCircle className="w-3.5 h-3.5 text-blue-500" />
-          <span>50:50 찬스</span>
+          <span>50:50 ({lifeline5050Used ? 0 : 1}/1)</span>
         </button>
 
         <button
           onClick={useHintLifeline}
-          disabled={lifelineHintUsed || isAnswered}
+          disabled={hintsUsed >= HINT_LIMIT || isAnswered}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-colors ${
-            lifelineHintUsed
+            hintsUsed >= HINT_LIMIT
               ? 'opacity-40 cursor-not-allowed bg-stone-100 border-stone-200 text-stone-400'
               : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-50'
           }`}
         >
           <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
-          <span>역사학자 힌트</span>
+          <span>역사학자 힌트 ({HINT_LIMIT - hintsUsed}/{HINT_LIMIT})</span>
         </button>
       </div>
 

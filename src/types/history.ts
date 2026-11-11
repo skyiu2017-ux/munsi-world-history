@@ -84,6 +84,8 @@ export interface UserProfile {
   nickname: string;
   schoolName: string;
   gradeClass: string; // 미선택이면 빈 문자열
+  studentName?: string; // 교사용 확인 정보. 공용 랭킹에는 게시하지 않음
+  studentNumber?: number; // 학급 내 출석번호. 동일 학생 식별에 사용
   profileSetupDone?: boolean; // 닉네임·학급 최초 설정 완료 여부
   level: number;
   xp: number;

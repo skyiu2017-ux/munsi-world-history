@@ -132,6 +132,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   <select
                     value={gradeClass}
                     onChange={e => setGradeClass(e.target.value)}
+                    disabled={true}
                     className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100"
                     required
                   >

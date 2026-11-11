@@ -1,6 +1,6 @@
 import { UserProfile, LeaderboardEntry, WrongNoteItem, Question, QuizAttemptRecord } from '../types/history';
 import { INITIAL_ACHIEVEMENTS } from '../data/achievementsData';
-import { SCHOOL_NAME, isValidClass } from '../data/schoolConfig';
+import { SCHOOL_NAME, GRADE, isValidClass } from '../data/schoolConfig';
 import { isRemoteEnabled, fetchRemoteLeaderboard, submitRemoteEntry } from './remoteLeaderboard';
 
 const STORAGE_KEYS = {
@@ -27,6 +27,8 @@ const DEFAULT_PROFILE: UserProfile = {
   nickname: '세계사탐험가',
   schoolName: SCHOOL_NAME,
   gradeClass: '',
+  studentName: '',
+  studentNumber: undefined,
   profileSetupDone: false,
   level: 1,
   xp: 0,
@@ -73,12 +75,16 @@ export const storageService = {
       const data = localStorage.getItem(STORAGE_KEYS.PROFILE);
       if (data) {
         const parsed = JSON.parse(data);
-        const setupDone = parsed.profileSetupDone === true && isValidClass(parsed.gradeClass);
+        const setupDone = parsed.profileSetupDone === true && isValidClass(parsed.gradeClass) &&
+          /^.{2,20}$/.test(String(parsed.studentName || '').trim()) &&
+          Number.isInteger(Number(parsed.studentNumber)) && Number(parsed.studentNumber) >= 1 && Number(parsed.studentNumber) <= 45;
         return {
           ...DEFAULT_PROFILE,
           ...parsed,
           schoolName: SCHOOL_NAME,
           gradeClass: setupDone ? parsed.gradeClass : '',
+          studentName: setupDone ? parsed.studentName : '',
+          studentNumber: setupDone ? Number(parsed.studentNumber) : undefined,
           profileSetupDone: setupDone,
           achievements: DEFAULT_PROFILE.achievements.map(defaultAch => {
             const existing = parsed.achievements?.find((a: any) => a.id === defaultAch.id);
@@ -100,13 +106,29 @@ export const storageService = {
     }
   },
 
-  updateProfileDetails(nickname: string, schoolName: string, gradeClass: string): UserProfile {
+  updateProfileDetails(nickname: string, schoolName: string, gradeClass: string, studentName?: string, studentNumber?: number): UserProfile {
     const profile = this.getUserProfile();
+    const oldId = this.getPlayerId();
     profile.nickname = nickname.trim() || profile.nickname;
     profile.schoolName = SCHOOL_NAME;
-    if (isValidClass(gradeClass.trim())) {
+    // 학년·반·번호는 최초 등록 후 잠금. 수정은 교사에게 요청해야 합니다.
+    if (!profile.profileSetupDone && isValidClass(gradeClass.trim()) &&
+        studentName && studentName.trim().length >= 2 &&
+        Number.isInteger(studentNumber) && Number(studentNumber) >= 1 && Number(studentNumber) <= 45) {
       profile.gradeClass = gradeClass.trim();
+      profile.studentName = studentName.trim().slice(0, 20);
+      profile.studentNumber = Number(studentNumber);
       profile.profileSetupDone = true;
+    }
+    if (profile.profileSetupDone) {
+      const newId = `stu-${GRADE}-${Number(/(\d+)반/.exec(profile.gradeClass)?.[1] || 0)}-${profile.studentNumber}`;
+      try {
+        const entries = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEADERBOARD) || '[]') as LeaderboardEntry[];
+        if (oldId !== newId) {
+          const migrated = entries.map(e => e.id === oldId ? { ...e, id: newId } : e);
+          localStorage.setItem(STORAGE_KEYS.LEADERBOARD, JSON.stringify(migrated));
+        }
+      } catch (e) {} 
     }
     this.saveUserProfile(profile);
 
@@ -186,6 +208,10 @@ export const storageService = {
   // 기기마다 하나씩 만들어지는 고유 번호 (서버에서 '같은 학생'을 구분하는 용도)
   getPlayerId(): string {
     try {
+      const p = this.getUserProfile();
+      if (p.profileSetupDone && p.studentNumber && isValidClass(p.gradeClass)) {
+        return `stu-${GRADE}-${Number(/(\d+)반/.exec(p.gradeClass)?.[1] || 0)}-${p.studentNumber}`;
+      }
       let id = localStorage.getItem(STORAGE_KEYS.PLAYER_ID);
       if (!id) {
         id =
@@ -229,7 +255,10 @@ export const storageService = {
       if (pending && mine) {
         let sent = false;
         try {
-          sent = await submitRemoteEntry(mine, pending === 'played');
+          const profile = this.getUserProfile();
+          if (profile.studentName && profile.studentNumber) {
+            sent = await submitRemoteEntry(mine, pending === 'played', profile.studentName, profile.studentNumber);
+          }
         } catch (e) {
           sent = false;
         }

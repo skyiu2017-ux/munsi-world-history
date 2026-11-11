@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
               중3 세계사 마스터
             </span>
             <span className="hidden sm:inline-block text-xs text-stone-500 dark:text-stone-400 ml-2">
-              중학 역사② 전 범위
+              중학 역사① · 세계사
             </span>
           </div>
         </button>

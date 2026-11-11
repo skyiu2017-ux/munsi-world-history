@@ -124,8 +124,8 @@ export default function App() {
     }
   }, [currentTab]);
 
-  const handleUpdateProfile = (nickname: string, schoolName: string, gradeClass: string) => {
-    const updated = storageService.updateProfileDetails(nickname, schoolName, gradeClass);
+  const handleUpdateProfile = (nickname: string, schoolName: string, gradeClass: string, studentName?: string, studentNumber?: number) => {
+    const updated = storageService.updateProfileDetails(nickname, schoolName, gradeClass, studentName, studentNumber);
     setUserProfile(updated);
     setLeaderboard(storageService.getLeaderboard());
     syncLeaderboard();
@@ -432,7 +432,7 @@ export default function App() {
       {!userProfile.profileSetupDone && (
         <ProfileSetupModal
           defaultNickname={userProfile.nickname}
-          onSubmit={(nickname, gradeClass) => handleUpdateProfile(nickname, userProfile.schoolName, gradeClass)}
+          onSubmit={(nickname, gradeClass, studentName, studentNumber) => handleUpdateProfile(nickname, userProfile.schoolName, gradeClass, studentName, studentNumber)}
         />
       )}
 
@@ -586,7 +586,7 @@ export default function App() {
       <footer className="border-t border-stone-200 dark:border-stone-800 bg-white/50 dark:bg-stone-900/50 py-8 text-xs text-stone-500 text-center">
         <div className="max-w-7xl mx-auto px-4 space-y-2">
           <div className="flex items-center justify-center gap-4 text-stone-600 dark:text-stone-400 font-medium">
-            <span>중학교 3학년 역사② (세계사) 교육과정 연계</span>
+            <span>미래엔 중학 역사① (세계사) 교과서 연계</span>
             <span aria-hidden="true">·</span>
             <span>4대 문명부터 제국주의까지</span>
             <span aria-hidden="true">·</span>

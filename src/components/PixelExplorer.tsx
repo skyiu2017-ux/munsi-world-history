@@ -188,13 +188,15 @@ interface DungeonProgressBarProps {
   totalFloors?: number;
   mode?: string;
   isEscaped?: boolean;
+  isInDanger?: boolean;
 }
 
 export const DungeonProgressBar: React.FC<DungeonProgressBarProps> = ({
   currentFloor,
   totalFloors = 15,
   mode = '던전 탈출',
-  isEscaped = false
+  isEscaped = false,
+  isInDanger = false
 }) => {
   const percentage = Math.min(100, Math.round((currentFloor / totalFloors) * 100));
 
@@ -216,12 +218,12 @@ export const DungeonProgressBar: React.FC<DungeonProgressBarProps> = ({
       </div>
 
       {/* Visual Dungeon Corridor with moving Pixel Explorer */}
-      <div className="relative h-14 bg-stone-950 rounded-xl border border-stone-800 overflow-hidden flex items-center px-4">
+      <div className="relative h-32 sm:h-36 bg-stone-950 rounded-xl border border-stone-800 overflow-hidden px-3 sm:px-4" aria-label="미궁 진행 애니메이션">
         {/* Stone Dungeon Background Tiles */}
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#d97706_1px,transparent_1px)] [background-size:12px_12px]" />
 
         {/* Floor stone track */}
-        <div className="absolute bottom-0 left-0 right-0 h-3 bg-stone-800 border-t border-stone-700" />
+        <div className="absolute bottom-0 left-0 right-0 h-4 bg-stone-800 border-t border-stone-700" />
 
         {/* Torch on left entrance */}
         <div className="absolute left-2 top-2 flex flex-col items-center">
@@ -230,8 +232,8 @@ export const DungeonProgressBar: React.FC<DungeonProgressBarProps> = ({
         </div>
 
         {/* Exit Door with daylight on the far right */}
-        <div className="absolute right-2 top-1.5 flex flex-col items-center">
-          <div className={`w-8 h-10 border-2 rounded-t-lg flex items-center justify-center transition-all ${
+        <div className="absolute right-3 bottom-4 flex flex-col items-center z-10">
+          <div className={`w-9 h-14 border-2 rounded-t-lg flex items-center justify-center transition-all ${
             isEscaped
               ? 'border-amber-400 bg-amber-200/90 shadow-[0_0_15px_#f59e0b]'
               : 'border-stone-600 bg-stone-900/80'
@@ -243,15 +245,17 @@ export const DungeonProgressBar: React.FC<DungeonProgressBarProps> = ({
 
         {/* Explorer progressing from left (deep dungeon) to right (sunlight exit) */}
         <div
-          className="absolute transition-all duration-700 ease-out flex items-center"
+          className="absolute transition-[left] duration-700 ease-out z-10"
           style={{
-            left: `calc(${Math.min(85, Math.max(8, percentage * 0.85))}% - 16px)`,
-            bottom: '4px'
+            // 모바일에서도 96px 캐릭터 전체와 우측 출구 36px가 모두 보이도록 이동 범위를 제한.
+            left: `${Math.max(2, Math.min(52, percentage * 0.52))}%`,
+            bottom: '2px'
           }}
         >
           <PixelExplorer
-            size="md"
-            state={isEscaped ? 'escaped' : percentage > 50 ? 'walking' : 'idle'}
+            size="lg"
+            state={isEscaped ? 'escaped' : isInDanger ? 'trembling' : percentage > 50 ? 'walking' : 'idle'}
+            showSweat={isInDanger}
           />
         </div>
       </div>

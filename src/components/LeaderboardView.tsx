@@ -234,6 +234,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               <select
                 value={editClass}
                 onChange={e => setEditClass(e.target.value)}
+                disabled={true}
                 className="w-full px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 text-stone-900 dark:text-stone-100"
               >
                 {CLASSES_LIST.map(cls => (
