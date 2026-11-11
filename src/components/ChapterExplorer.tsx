@@ -265,19 +265,19 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
                 onClick={() => onStartQuiz(selectedChapter.id, '초급')}
                 className="flex-1 sm:flex-none px-3.5 py-2 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800/60 transition-colors"
               >
-                초급 퀴즈
+                초급 퀴즈 (5문항)
               </button>
               <button
                 onClick={() => onStartQuiz(selectedChapter.id, '중급')}
                 className="flex-1 sm:flex-none px-3.5 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800/60 transition-colors"
               >
-                중급 퀴즈
+                중급 퀴즈 (5문항)
               </button>
               <button
                 onClick={() => onStartQuiz(selectedChapter.id, '고급')}
                 className="flex-1 sm:flex-none px-3.5 py-2 text-xs font-semibold rounded-lg bg-purple-50 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800/60 transition-colors"
               >
-                고급 퀴즈
+                고급 퀴즈 (5문항)
               </button>
               <button
                 onClick={onStartAdaptive}
