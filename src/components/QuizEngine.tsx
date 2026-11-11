@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 import { DungeonProgressBar, PixelExplorer } from './PixelExplorer';
-import { shuffleQuestionOptions } from '../utils/quizUtils';
+import { shuffleArray, shuffleQuestionOptions } from '../utils/quizUtils';
 
 interface QuizEngineProps {
   questions: Question[];
@@ -35,7 +35,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   onFinishQuiz,
   onExit
 }) => {
-  // Current difficulty state for adaptive mode
+  // Level-up quiz automatically adjusts question difficulty
   const [currentDifficulty, setCurrentDifficulty] = useState<Difficulty>(
     config.initialDifficulty || '초급'
   );
@@ -85,8 +85,8 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     }
 
     // Shuffle pool & randomize options for every question (1~4, 1~5)
-    const shuffled = pool.sort(() => 0.5 - Math.random());
-    const targetLength = config.questionCount || (config.mode === 'adaptive' ? 10 : Math.min(8, shuffled.length));
+    const shuffled = shuffleArray(pool);
+    const targetLength = config.mode === 'adaptive' ? 20 : (config.questionCount || Math.min(8, shuffled.length));
     // 적응형 첫 문제는 반드시 초급으로 시작하고, 이후 실력에 따라 난이도를 조정한다.
     const firstEasy = config.mode === 'adaptive' ? shuffled.find(q => q.difficulty === '초급') : undefined;
     const orderedPool = firstEasy ? [firstEasy, ...shuffled.filter(q => q.id !== firstEasy.id)] : shuffled;
@@ -117,7 +117,8 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   useEffect(() => {
     if (!currentQ || isAnswered) return;
 
-    // 단원 학습은 읽고 추론할 시간을 충분히 주고, 적응형은 약간 짧게 운영한다.\n    setTimeLeft(config.mode === 'chapter' ? (config.initialDifficulty === '고급' ? 45 : 35) : 30);
+    // 단원 학습과 레벨업 퀴즈에 읽고 판단할 시간을 제공합니다.
+    setTimeLeft(config.mode === 'chapter' ? (config.initialDifficulty === '고급' ? 45 : 35) : 35);
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -241,9 +242,11 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       );
       if (pool.length === 0) return prevList;
 
+      const available = shuffleArray(pool);
       const updatedRemaining = nextRemaining.map((q, i) => {
-        const replacement = pool[i % pool.length] || q;
-        return shuffleQuestionOptions(replacement);
+        // 대체할 새 문항이 없으면 원래 문제를 유지합니다. 같은 회차 중복 출제 금지.
+        const replacement = available[i] || q;
+        return replacement === q ? q : shuffleQuestionOptions(replacement);
       });
       return [...prevList.slice(0, currentIndex + 1), ...updatedRemaining];
     });
@@ -268,6 +271,9 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     setShowHint(true);
   };
 
+  // 레벨업 미궁: 20층에서 시작해 정답을 20개 맞히면 1층 출구에 도착합니다.
+  // 오답은 층을 올리지 않습니다. 20문항을 다 풀고도 남은 층이 있으면
+  // 다른 문제 20개를 추가하며, 기존 에너지와 누적 오답은 유지됩니다.
   const handleNextQuestion = () => {
     if (failureReason) return;
     setDifficultyChangeNotice(null);
@@ -276,33 +282,37 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     setSelectedOption(null);
     setIsAnswered(false);
 
-    if (currentIndex + 1 < activeQuestionList.length) {
+    const isLevelUp = config.mode === 'adaptive';
+    const escaped = isLevelUp && correctCount >= 20;
+    if (!escaped && currentIndex + 1 < activeQuestionList.length) {
       setCurrentIndex(prev => prev + 1);
-    } else {
-      // Quiz finished - calculate elapsed time and speed
-      const elapsed = Number(((Date.now() - startTime) / 1000).toFixed(1));
-      const speedPerQuestion = totalAnswered > 0 ? Number((elapsed / totalAnswered).toFixed(1)) : 0;
-      const escapeFloor = correctCount >= activeQuestionList.length 
-        ? '지상 탈출 성공! 🏆' 
-        : `B${Math.max(1, activeQuestionList.length - correctCount)}층 도달`;
-
-      const accuracy = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 0;
-      confetti({
-        particleCount: 100,
-        spread: 80,
-        origin: { y: 0.6 }
-      });
-      onFinishQuiz({
-        score,
-        accuracy,
-        maxCombo,
-        totalAnswered,
-        correctCount,
-        timeTakenSeconds: elapsed,
-        speedPerQuestion,
-        escapeFloor
-      });
+      return;
     }
+
+    if (isLevelUp && !escaped) {
+      const used = new Set(activeQuestionList.map(q => q.id));
+      const fresh = shuffleArray(questions.filter(q => !used.has(q.id))).slice(0, 20);
+      if (fresh.length > 0) {
+        setActiveQuestionList(prev => [...prev, ...fresh.map(q => shuffleQuestionOptions(q))]);
+        setCurrentIndex(prev => prev + 1);
+        setDifficultyChangeNotice('남은 층에 도전! 다른 문제 20개로 계속 진행합니다. (에너지 유지)');
+        return;
+      }
+    }
+
+    const elapsed = Number(((Date.now() - startTime) / 1000).toFixed(1));
+    const speedPerQuestion = totalAnswered > 0 ? Number((elapsed / totalAnswered).toFixed(1)) : 0;
+    const escapeFloor = isLevelUp
+      ? (escaped ? '1층 탈출 성공! 🏆' : '도전 실패 · 출제 가능한 문제 소진')
+      : '단원 학습 완료';
+    const accuracy = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 0;
+    if (escaped || !isLevelUp) {
+      confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+    }
+    onFinishQuiz({
+      score, accuracy, maxCombo, totalAnswered, correctCount,
+      timeTakenSeconds: elapsed, speedPerQuestion, escapeFloor
+    });
   };
 
   if (!currentQ) {
@@ -341,7 +351,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
           <p><span className="font-bold">마지막 문제 해설:</span> {currentQ.explanation}</p>
         </div>
         <div className="flex flex-wrap gap-3 justify-center">
-          <button onClick={onExit} className="px-5 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 text-sm font-bold">탐험 화면으로</button>
+          <button onClick={onExit} className="px-5 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 text-sm font-bold">첫 화면으로</button>
           <button onClick={() => {
             const elapsed = Number(((Date.now() - startTime) / 1000).toFixed(1));
             onFinishQuiz({score, accuracy: totalAnswered ? Math.round(correctCount / totalAnswered * 100) : 0,
@@ -456,8 +466,8 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       {/* Dungeon Escape Progress Bar */}
       <DungeonProgressBar
         currentFloor={correctCount}
-        totalFloors={activeQuestionList.length}
-        isEscaped={correctCount >= activeQuestionList.length}
+        totalFloors={isAdaptive ? 20 : activeQuestionList.length}
+        isEscaped={isAdaptive && correctCount >= 20}
         isInDanger={isAdaptive && energy <= 2}
       />
 
@@ -598,7 +608,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
                 onClick={handleNextQuestion}
                 className="px-6 py-2.5 text-xs font-bold rounded-xl bg-amber-700 hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white shadow-xs transition-colors flex items-center gap-2"
               >
-                <span>{currentIndex + 1 < activeQuestionList.length ? '다음 문제로' : '결과 확인하기'}</span>
+                <span>{isAdaptive && correctCount >= 20 ? '1층 탈출 결과 보기' : currentIndex + 1 < activeQuestionList.length ? '다음 문제로' : isAdaptive ? '다음 20문항으로 계속 도전' : '결과 확인하기'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
