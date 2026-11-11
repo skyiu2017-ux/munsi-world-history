@@ -52,17 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'text-stone-600 dark:text-stone-400 hover:text-stone-950 dark:hover:text-stone-100'
             }`}
           >
-            시대별 탐험 & 개념
-          </button>
-          <button
-            onClick={() => onSelectTab('adaptive')}
-            className={`whitespace-nowrap transition-colors py-1 ${
-              currentTab === 'adaptive'
-                ? 'text-amber-800 dark:text-amber-400 border-b-2 border-amber-700 font-semibold'
-                : 'text-stone-600 dark:text-stone-400 hover:text-stone-950 dark:hover:text-stone-100'
-            }`}
-          >
-            적응형 퀴즈
+            단원별 학습
           </button>
           <button
             onClick={() => onSelectTab('speed')}
