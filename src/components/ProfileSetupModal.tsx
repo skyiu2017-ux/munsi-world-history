@@ -95,7 +95,7 @@ export const ProfileSetupModal: React.FC<ProfileSetupModalProps> = ({ defaultNic
         </div>
         <p className="text-[11px] text-stone-500 dark:text-stone-400">같은 반·번호로 다른 이름을 등록하면 서버에서 거절합니다. 다른 사람이 대신 입력할 수 있으므로 공식 시험용 인증을 대체하지는 않습니다.</p>
         <button
-          type="submit
+          type="submit"
           disabled={!canSubmit}
           className="w-full py-2.5 rounded-xl text-sm font-bold bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-40 disabled:cursor-not-allowed"
         >
