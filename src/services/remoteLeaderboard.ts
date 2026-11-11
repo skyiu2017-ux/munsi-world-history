@@ -20,6 +20,7 @@ export async function fetchRemoteLeaderboard(): Promise<LeaderboardEntry[]> {
   const res = await fetch(`${API_URL}?t=${Date.now()}`, { redirect: 'follow', signal: withTimeout(15000) });
   const data = await res.json();
   if (!data?.ok || !Array.isArray(data.entries)) throw new Error(data?.error || 'bad response');
+  if (data.version !== 2) throw new Error('Google Apps Script를 새 Code.gs 버전으로 다시 배포해야 합니다.');
 
   return data.entries.map((e: any): LeaderboardEntry => ({
     id: String(e.id),
