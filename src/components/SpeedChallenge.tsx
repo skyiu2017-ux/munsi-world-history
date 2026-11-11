@@ -261,12 +261,12 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
     return (
       <div className="max-w-xl mx-auto px-4 py-12 text-center space-y-6">
         <div className="flex justify-center py-2">
-          <PixelExplorer size="xl" state={isEscaped ? 'escaped' : 'idle'} />
+          <PixelExplorer size="xl" state={isEscaped ? 'escaped' : 'trembling'} showSweat={!isEscaped} />
         </div>
 
         <div className="space-y-2">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 dark:text-stone-100 font-pixel">
-            {isEscaped ? '🎉 지상 탈출 성공!' : '⏱️ 타임오버! 탈출 종료'}
+            {isEscaped ? '🎉 지상 탈출 성공!' : failReason ? '탈출 실패 · GAME OVER' : '⏱️ 시간 초과 · 탈출 실패'}
           </h2>
           <p className="text-sm text-stone-600 dark:text-stone-400">
             {isEscaped 
@@ -320,7 +320,8 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-3 pt-2">
+        <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
+          <button onClick={onExit} className="px-5 py-2.5 text-xs font-semibold rounded-xl border border-stone-300 dark:border-stone-700 text-stone-800 dark:text-stone-200">첫 화면으로</button>
           <button
             onClick={startChallenge}
             className="px-5 py-2.5 text-xs font-semibold rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-800 dark:text-stone-200 hover:bg-stone-200 transition-colors flex items-center gap-2"
