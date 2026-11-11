@@ -207,7 +207,7 @@ export const DungeonProgressBar: React.FC<DungeonProgressBarProps> = ({
         <div className="flex items-center gap-2">
           <span className="text-amber-400 font-bold">DUNGEON DEPTH:</span>
           <span className="px-2 py-0.5 rounded bg-stone-800 border border-stone-600 text-amber-300 font-bold">
-            {isEscaped ? '지상 탈출 완료! 🏆' : `B${totalFloors - currentFloor + 1}층 / 총 ${totalFloors}층`}
+            {isEscaped ? '1층 탈출 성공! 🏆' : `현재 ${Math.max(1, totalFloors - currentFloor)}층 / 목표 1층`}
           </span>
         </div>
 
@@ -264,11 +264,11 @@ export const DungeonProgressBar: React.FC<DungeonProgressBarProps> = ({
       <div className="text-[11px] text-center text-stone-400">
         {isEscaped ? (
           <span className="text-emerald-400 font-bold">
-            🎉 축하합니다! 세계사 지식으로 지하 미궁을 완전히 탈출했습니다!
+            🎉 1층 출구 도착! 미궁 탈출 성공!
           </span>
         ) : (
           <span>
-            문제를 맞힐 때마다 지상 출구로 한 걸음씩 올라갑니다! (남은 깊이: {totalFloors - currentFloor}층)
+            문제를 맞힐 때마다 한 층씩 올라갑니다! (1층 출구까지 정답 {totalFloors - currentFloor}개)
           </span>
         )}
       </div>
