@@ -348,7 +348,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 pb-16">
+      <main className="flex-1 pb-28 md:pb-16">
         {currentTab === 'quizSession' && quizConfig ? (
           <QuizEngine
             questions={
