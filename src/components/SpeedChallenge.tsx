@@ -229,8 +229,8 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   // 멀리에서 출발: 시작 시 손 대부분은 화면 밖에 있고, 시간·무응답에 따라 점점 접근.
   // 20초 무응답이면 캐릭터에게 닿기 직전까지 접근하며 실패 처리됩니다.
   const monsterApproach = Math.min(1, danger * 0.36 + (idleSeconds / 20) * 0.72);
-  const monsterX = -114 + monsterApproach * 185;
-  const monsterScale = 0.65 + monsterApproach * 0.55;
+  const monsterX = -72 + monsterApproach * 150;
+  const monsterScale = 0.72 + monsterApproach * 0.48;
   const escapeFloor = isEscaped 
     ? '지상 탈출 성공! 🏆' 
     : distanceToExit <= 25 
