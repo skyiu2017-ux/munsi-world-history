@@ -115,7 +115,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
     endedRef.current = true;
     clearInterval(timerRef.current);
     setFinalTimeSeconds(60);
-    setScore(prev => prev + 1200); // 60초 생존 보너스
+    setScore(prev => prev + 3000); // 60초 생존 보너스
     setGameState('ended');
     confetti({ particleCount: 120, spread: 85, origin: { y: 0.6 } });
   }, [gameState, timeLeft]);
@@ -261,7 +261,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">2.</span>
-            <span>60초를 끝까지 버티면 생존 성공! 정답 점수에 생존 보너스 1,200점이 더해집니다.</span>
+            <span>60초를 끝까지 버티면 생존 성공! 정답 점수에 생존 보너스 3,000점이 더해집니다.</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">3.</span>
@@ -451,6 +451,8 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
         </div>
         {/* Runner Stage & Animated Floor */}
         <div className="relative h-36 sm:h-40 flex items-end overflow-hidden">
+          {/* 괴물과 탐험가의 거리에 따라 위기감이 커지는 화면 효과 */}
+          {nearCatch && <div className="absolute inset-0 border-4 border-rose-500/80 rounded-lg animate-pulse pointer-events-none z-30" />}
           {/* Moving Stone Floor */}
           <div className="absolute bottom-0 left-0 right-0 h-4 bg-stone-800 border-t-2 border-amber-900/60 animate-floor" />
 
