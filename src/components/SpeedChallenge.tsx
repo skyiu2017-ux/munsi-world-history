@@ -16,6 +16,8 @@ interface SpeedChallengeProps {
     timeTakenSeconds: number;
     speedPerQuestion: number;
     escapeFloor: string;
+    correctCount: number;
+    totalAnswered: number;
   }) => void;
   onExit: () => void;
 }
@@ -50,8 +52,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   const [shuffledList, setShuffledList] = useState<Question[]>([]);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
 
-  // 120m 탈출로: 정답마다 10m 전진, 정답 12개에 탈출.
-  const [distanceToExit, setDistanceToExit] = useState<number>(120);
+  // 60초 생존형 게임: 출구 거리가 아닌 정답 횟수와 괴물과의 거리를 추적합니다.
 
   // Time tracking
   const [startTime, setStartTime] = useState<number>(0);
@@ -77,7 +78,6 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
     setMaxCombo(0);
     setCorrectCount(0);
     setTotalAnswered(0);
-    setDistanceToExit(120);
     startedAt.current = Date.now();
     lastAnswerAt.current = startedAt.current;
     endedRef.current = false;
@@ -101,7 +101,11 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   }, [gameState, startTime]);
 
   const endChallenge = () => {
+    if (endedRef.current) return;
     endedRef.current = true;
+    clearInterval(timerRef.current);
+    setFailReason('도전을 종료하여 괴물에게 붙잡혔습니다.');
+    setFinalTimeSeconds(Math.min(60, Number(((Date.now() - startedAt.current) / 1000).toFixed(1))));
     setGameState('ended');
   };
 
@@ -111,11 +115,10 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
     endedRef.current = true;
     clearInterval(timerRef.current);
     setFinalTimeSeconds(60);
+    setScore(prev => prev + 1200); // 60초 생존 보너스
     setGameState('ended');
-    if (distanceToExit <= 0 && !failReason) {
-      confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
-    }
-  }, [gameState, timeLeft, distanceToExit, failReason]);
+    confetti({ particleCount: 120, spread: 85, origin: { y: 0.6 } });
+  }, [gameState, timeLeft]);
 
   // 20초 무응답 실패: 마지막 선택 이후 20초가 지났는지 0.2초 간격으로 확인합니다.
   // 정답이든 오답이든 실제로 선택했을 때만 추격 유예 시간이 초기화됩니다.
@@ -136,7 +139,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   }, [gameState]);
 
   const handleSelect = (selectedIdx: number) => {
-    if (gameState !== 'playing' || answerLock.current) return;
+    if (gameState !== 'playing' || answerLock.current || endedRef.current || timeLeft <= 0) return;
     answerLock.current = true;
     lastAnswerAt.current = Date.now();
     setIdleSeconds(0);
@@ -155,10 +158,6 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
       const nextCorrect = correctCount + 1;
       setCorrectCount(nextCorrect);
 
-      // 정답마다 출구까지 10m 전진
-      const newDistance = Math.max(0, distanceToExit - 10);
-      setDistanceToExit(newDistance);
-
       // Score bonus with combo
       const comboMultiplier = nextCombo >= 5 ? 2.5 : nextCombo >= 3 ? 1.8 : 1.2;
       const points = Math.round(150 * comboMultiplier);
@@ -174,17 +173,6 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
         });
       }
 
-      // If reached exit door!
-      if (newDistance === 0) {
-        confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
-        clearInterval(timerRef.current);
-        const elapsed = (Date.now() - startTime) / 1000;
-        setFinalTimeSeconds(Number(elapsed.toFixed(1)));
-        setTimeout(() => {
-          endChallenge();
-        }, 500);
-        return;
-      }
     } else {
       setFeedback('wrong');
       setCombo(0);
@@ -204,6 +192,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
 
     // Move to next question after short visual confirmation
     setTimeout(() => {
+      if (endedRef.current) return;
       setFeedback(null);
       answerLock.current = false;
       if (currentQIndex + 1 < shuffledList.length) {
@@ -221,23 +210,23 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   const speedPerQuestion = totalAnswered > 0 
     ? Number((finalTimeSeconds / totalAnswered).toFixed(1)) 
     : 0;
-  // 반드시 출구에 도착해야 성공. 남은 거리만 가까운 상태로는 성공하지 않습니다.
-  const isEscaped = !failReason && distanceToExit <= 0;
+  // 생존 여부는 정답 수가 아닌 60초를 끝까지 버텼는지로만 결정합니다.
+  const isSurvived = gameState === 'ended' && timeLeft === 0 && !failReason;
+  const wrongCount = 5 - hearts;
   const danger = Math.max(0, Math.min(1, (60 - timeLeft) / 60));
-  const heroPosition = 28 + ((120 - distanceToExit) / 120) * 37;
-  // 처음부터 보이도록 왼쪽에 두고, 답을 선택하지 않은 시간이 길수록 탐험가 쪽으로 전진.
-  // 멀리에서 출발: 시작 시 손 대부분은 화면 밖에 있고, 시간·무응답에 따라 점점 접근.
-  // 20초 무응답이면 캐릭터에게 닿기 직전까지 접근하며 실패 처리됩니다.
-  const monsterApproach = Math.min(1, danger * 0.36 + (idleSeconds / 20) * 0.72);
-  const monsterX = -72 + monsterApproach * 150;
-  const monsterScale = 0.72 + monsterApproach * 0.48;
-  const escapeFloor = isEscaped 
-    ? '지상 탈출 성공! 🏆' 
-    : distanceToExit <= 25 
-    ? 'B1층 (출구 바로 앞)' 
-    : distanceToExit <= 50 
-    ? 'B3층 (지하 통로)' 
-    : 'B7층 (깊은 미궁)';
+  // 정답을 맞힐 때마다 탐험가가 조금 더 앞서 나갑니다. 화면을 벗어나지는 않습니다.
+  const heroPosition = 45 + Math.min(12, correctCount * 1.35);
+  // 4회 누적 오답 / 2회 연속 오답 때 괴물 손끝이 캐릭터 바로 뒤에 붙습니다.
+  // 그 이전에는 시간과 무응답이 쌓일수록 서서히 가까워지고, 정답은 간격을 벌립니다.
+  const nearCatch = hearts <= 1 || wrongStreak >= 2 || idleSeconds >= 18;
+  const monsterGap = nearCatch
+    ? 116
+    : Math.max(140, 245 - wrongCount * 23 - wrongStreak * 14
+       - danger * 22 - idleSeconds * 2.5 + Math.min(correctCount, 12) * 3);
+  const monsterScale = nearCatch ? 1.13 : 0.72 + (245 - monsterGap) / 320;
+  const escapeFloor = isSurvived
+    ? '60초 생존 성공! 🏆'
+    : `괴물에게 잡힘 · 정답 ${correctCount}개`;
 
   if (gameState === 'ready') {
     return (
@@ -256,31 +245,31 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
             땀을 흘리며 던전을 질주하라!
           </h2>
           <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed max-w-lg mx-auto">
-            어두운 지하 미궁에 갇힌 탐험가가 탈출구(120m)를 향해 전력 질주합니다!<br />
-            정답을 맞힐수록 출구에 가까워집니다. 시간이 흐를수록 뒤에서 거대한 푸른 괴물의 손이 다가옵니다.
+            60초 동안 푸른 괴물에게 잡히지 않고 최대한 많은 역사 문제를 푸세요!<br />
+            정답을 맞힐수록 앞서 달리고, 오답이나 망설임이 쌓이면 괴물이 따라붙습니다.
           </p>
         </div>
 
         {/* Game Rules Card */}
         <div className="p-4 rounded-2xl bg-amber-50 dark:bg-stone-900 border border-amber-200 dark:border-stone-800 text-xs text-stone-700 dark:text-stone-300 text-left space-y-2 max-w-lg mx-auto font-pixel">
           <div className="font-bold text-amber-900 dark:text-amber-400 flex items-center gap-1.5">
-            <span>⚔️ 던전 탈출 규칙:</span>
+            <span>⚔️ 60초 생존 도전 규칙:</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">1.</span>
-            <span>정답마다 출구까지 10m 전진합니다. 정답 12개를 맞혀야 탈출합니다.</span>
+            <span>정답을 맞힐수록 탐험가가 괴물보다 앞서 달립니다. 문제 수에 제한 없이 계속 도전하세요.</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">2.</span>
-            <span>60초 안에 정답 12개를 맞히고 출구에 도착하면 성공입니다. 콤보는 점수를 높입니다.</span>
+            <span>60초를 끝까지 버티면 생존 성공! 정답 점수에 생존 보너스 1,200점이 더해집니다.</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">3.</span>
-            <span>문제를 20초 동안 선택하지 않으면 괴물에게 잡힙니다. 에너지 5칸도 지키세요.</span>
+            <span>20초 무응답이면 잡힙니다. 누적 오답 4회 또는 연속 2회면 손이 코앞까지 다가옵니다.</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">4.</span>
-            <span>전 단원 문제와 선지가 무작위로 출제됩니다. 에너지 5칸, 누적 오답 5회 또는 연속 오답 3회면 실패합니다.</span>
+            <span>누적 오답 5회 또는 연속 오답 3회면 즉시 붙잡힙니다. 정확하게 많이 풀수록 점수가 높아집니다.</span>
           </div>
         </div>
 
@@ -296,7 +285,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
             className="px-7 py-3 text-sm font-extrabold rounded-xl bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg transition-all flex items-center gap-2 font-pixel"
           >
             <Flame className="w-4 h-4 fill-current" />
-            <span>탈출 시작! (START 🏃‍♂️)</span>
+            <span>60초 생존 시작!</span>
           </button>
         </div>
       </div>
@@ -307,18 +296,18 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
     return (
       <div className="max-w-xl mx-auto px-4 py-12 text-center space-y-6">
         <div className="flex justify-center items-center py-2 min-h-28">
-          {!isEscaped && <div className="w-24 sm:w-28 -mr-5 opacity-90"><BlueMonsterArm caught /></div>}
-          <PixelExplorer size="xl" state={isEscaped ? 'escaped' : 'trembling'} showSweat={!isEscaped} />
+          {!isSurvived && <div className="w-24 sm:w-28 -mr-5 opacity-90"><BlueMonsterArm caught /></div>}
+          <PixelExplorer size="xl" state={isSurvived ? 'escaped' : 'trembling'} showSweat={!isSurvived} />
         </div>
 
         <div className="space-y-2">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 dark:text-stone-100 font-pixel">
-            {isEscaped ? '🎉 출구 도착! 괴물을 따돌렸습니다!' : '푸른 괴물에게 붙잡혔습니다 · GAME OVER'}
+            {isSurvived ? '🎉 60초 생존 성공! 괴물을 따돌렸습니다!' : '푸른 괴물에게 붙잡혔습니다 · GAME OVER'}
           </h2>
           <p className="text-sm text-stone-600 dark:text-stone-400">
-            {isEscaped 
-              ? `놀라운 순발력! ${finalTimeSeconds}초 만에 던전을 완벽 탈출했습니다.`
-              : failReason || `60초가 끝났을 때 출구까지 ${distanceToExit}m가 남아 괴물에게 잡혔습니다.`}
+            {isSurvived
+              ? `60초 동안 정답 ${correctCount}개! 생존 보너스 1,200점을 획득했습니다.`
+              : failReason || '괴물에게 붙잡혔습니다. 다시 도전해 보세요.'}
           </p>
         </div>
 
@@ -333,7 +322,11 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-stone-100 dark:border-stone-800 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-4 border-t border-stone-100 dark:border-stone-800 text-xs">
+              <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/30">
+                <span className="text-stone-500 block mb-0.5">맞힌 문제</span>
+                <span className="font-mono font-bold text-base text-emerald-700 dark:text-emerald-400">{correctCount}개</span>
+              </div>
             <div className="p-2 rounded-xl bg-stone-50 dark:bg-stone-800/60">
               <span className="text-stone-400 block mb-0.5">총 소요 시간</span>
               <span className="font-mono font-bold text-base text-stone-900 dark:text-stone-100">
@@ -362,7 +355,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
 
           {/* Escape Status */}
           <div className="p-3 rounded-xl bg-amber-50 dark:bg-stone-800 border border-amber-200 dark:border-stone-700 text-xs flex items-center justify-between font-pixel">
-            <span className="text-stone-600 dark:text-stone-400">던전 도달 층수:</span>
+            <span className="text-stone-600 dark:text-stone-400">생존 결과:</span>
             <span className="font-bold text-amber-800 dark:text-amber-400">{escapeFloor}</span>
           </div>
         </div>
@@ -383,7 +376,9 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
               accuracy,
               timeTakenSeconds: finalTimeSeconds,
               speedPerQuestion,
-              escapeFloor
+              escapeFloor,
+              correctCount,
+              totalAnswered
             })}
             className="px-6 py-2.5 text-xs font-bold rounded-xl bg-amber-700 hover:bg-amber-800 text-white shadow-xs transition-colors flex items-center gap-2 font-pixel"
           >
@@ -434,14 +429,14 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
         <div className="flex justify-between items-center px-4">
           <div className="flex items-center gap-1 text-[11px] text-amber-400 font-pixel">
             <span className="animate-torch">🔥</span>
-            <span>지하 미궁 탈출로</span>
+            <span>60초 생존의 미궁</span>
           </div>
           <div className="text-xs font-pixel text-stone-400">
-            남은 거리: <span className="font-bold text-amber-300">{distanceToExit}m</span>
+            정답: <span className="font-bold text-amber-300">{correctCount}개</span>
           </div>
           <div className="flex items-center gap-1 text-[11px] text-amber-400 font-pixel">
-            <span>출구 게이트</span>
-            <span className="text-sm">🚪</span>
+            <span>60초 버티기</span>
+            <span className="text-sm">⏳</span>
           </div>
         </div>
 
@@ -450,7 +445,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           <span className="text-[11px] text-rose-300 font-bold">에너지 {hearts}/5 · 연속 오답 {wrongStreak}/3</span>
         </div>
         <div className="flex items-center justify-center gap-2 text-xs font-semibold text-blue-200">
-          <span>{idleSeconds >= 15 ? '괴물이 바로 뒤에 있습니다!' : '푸른 괴물이 다가옵니다'}</span>
+          <span className={nearCatch ? 'text-rose-400 font-black animate-pulse' : ''}>{nearCatch ? '위험! 괴물이 바로 뒤에!' : '정답을 맞혀 괴물과 거리를 벌리세요'}</span>
           <span className={idleSeconds >= 15 ? 'text-rose-400 animate-pulse font-black' : 'text-amber-300'}>무응답 {idleSeconds}/20초</span>
           <div className="h-1.5 w-16 rounded-full bg-stone-700 overflow-hidden"><div className="h-full bg-blue-400 transition-all duration-200" style={{ width: `${Math.min(100, idleSeconds * 5)}%` }} /></div>
         </div>
@@ -459,31 +454,26 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           {/* Moving Stone Floor */}
           <div className="absolute bottom-0 left-0 right-0 h-4 bg-stone-800 border-t-2 border-amber-900/60 animate-floor" />
 
-          {/* 먼 곳의 어두운 미궁에서 점점 커지며 접근하는 푸른 괴물의 손 */}
-          <div className="absolute bottom-2 z-10 pointer-events-none transition-[left,transform,opacity] duration-700 ease-linear"
+          {/* 손끝의 위치는 캐릭터와의 간격을 기준으로 계산: 모바일에서도 근접 연출 보장 */}
+          <div className="absolute bottom-2 z-10 pointer-events-none transition-[left,transform] duration-500 ease-out"
             style={{
-              left: `${monsterX}px`,
+              left: `calc(${heroPosition}% - ${monsterGap}px)`,
               transform: `scale(${monsterScale})`,
               transformOrigin: 'left bottom',
-              opacity: 0.7 + monsterApproach * 0.3
+              opacity: 0.97
             }}>
             <BlueMonsterArm />
-          </div>
-          {/* 출구를 향해 달리는 탐험가 */}
-          <div className="absolute right-2 bottom-4 z-20 flex flex-col items-center text-amber-300">
-            <div className="h-14 w-10 sm:h-16 sm:w-12 rounded-t-xl border-4 border-amber-400 bg-amber-100/15 shadow-[0_0_25px_#fbbf24] flex items-center justify-center text-2xl">🚪</div>
-            <span className="text-[9px] font-bold">EXIT</span>
           </div>
           {/* Running Pixel Explorer with flying sweat droplets */}
           <div 
             className="absolute transition-all duration-300 ease-out z-20"
             style={{
-              left: `${Math.max(28, Math.min(65, heroPosition))}%`,
+              left: `${heroPosition}%`,
               bottom: '2px'
             }}
           >
             <div className="flex flex-col items-center">
-              <PixelExplorer size="lg" state={hearts <= 2 ? "trembling" : "sweating_running"} showSweat={hearts <= 2} />
+              <PixelExplorer size="lg" state={nearCatch ? "trembling" : "sweating_running"} showSweat={nearCatch} />
             </div>
           </div>
         </div>
