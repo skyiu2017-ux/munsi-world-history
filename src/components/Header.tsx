@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserProfile } from '../types/history';
-import { BookOpen, Trophy, Flame, User, Sun, Moon, BarChart3, Sparkles } from 'lucide-react';
+import { BookOpen, Trophy, Flame, User, Sun, Moon, BarChart3, Sparkles, Menu } from 'lucide-react';
 
 interface HeaderProps {
   currentTab: string;
@@ -23,17 +23,17 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-stone-900/90 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 md:gap-8">
         {/* Zone 1: Brand Wordmark */}
         <button
           onClick={() => onSelectTab('explore')}
-          className="flex items-center gap-2.5 text-left group shrink-0"
+          className="flex items-center gap-2 text-left group shrink-0 min-w-0"
         >
           <div className="w-9 h-9 rounded-lg bg-amber-700 dark:bg-amber-600 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
-            <span className="font-display font-extrabold text-lg tracking-tight text-stone-900 dark:text-stone-100 whitespace-nowrap">
+            <span className="font-display font-extrabold text-sm sm:text-lg tracking-tight text-stone-900 dark:text-stone-100 whitespace-nowrap">
               중3 세계사 마스터
             </span>
             <span className="hidden sm:inline-block text-xs text-stone-500 dark:text-stone-400 ml-2">
@@ -90,11 +90,11 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Zone 3: 1 Primary Action & Utilities */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
           <a
             href="https://skyiu2017-ux.github.io/history-class/"
             title="문시중 역사 포털로 돌아가기"
-            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-semibold text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/50 transition-colors"
+            className="hidden sm:inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-semibold text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/50 transition-colors"
           >
             <BookOpen className="h-4 w-4" />
             <span className="hidden lg:inline">역사 포털</span>
@@ -122,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* User Profile Pill button */}
           <button
             onClick={onOpenProfile}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-amber-100/60 dark:hover:bg-amber-950/40 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-700 text-xs font-medium transition-colors"
+            className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1.5 rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-amber-100/60 dark:hover:bg-amber-950/40 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-700 text-xs font-medium transition-colors"
           >
             <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center text-[10px] font-bold">
               {userProfile.level}
@@ -139,6 +139,22 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
       </div>
+      {/* 화면이 작은 휴대전화에서도 모든 메뉴에 접근할 수 있는 고정 하단 메뉴 */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 grid grid-cols-4 border-t border-stone-200 dark:border-stone-700 bg-white/95 dark:bg-stone-900/95 backdrop-blur-lg shadow-[0_-4px_18px_rgba(0,0,0,0.1)] pb-[env(safe-area-inset-bottom)]" aria-label="모바일 주요 메뉴">
+        {([
+          { tab: 'explore', label: '단원별 학습', Icon: BookOpen },
+          { tab: 'speed', label: '미궁 탈출', Icon: Flame },
+          { tab: 'dashboard', label: '대시보드', Icon: BarChart3 },
+          { tab: 'leaderboard', label: '학급 랭킹', Icon: Trophy }
+        ] as const).map(({tab,label,Icon}) => (
+          <button key={tab} type="button" onClick={() => { onSelectTab(tab); window.scrollTo({top: 0, behavior: 'smooth'}); }}
+            aria-current={currentTab===tab ? 'page' : undefined}
+            className={`flex flex-col items-center justify-center min-h-[64px] px-1 py-2 gap-1 text-[11px] font-bold transition-colors ${currentTab === tab ? 'text-amber-700 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40' : 'text-stone-600 dark:text-stone-300'}`}>
+            <Icon className="w-5 h-5" aria-hidden="true" />
+            <span className="whitespace-nowrap">{label}</span>
+          </button>
+        ))}
+      </nav>
     </header>
   );
 };
