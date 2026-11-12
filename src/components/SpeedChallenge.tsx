@@ -226,7 +226,11 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
   const danger = Math.max(0, Math.min(1, (60 - timeLeft) / 60));
   const heroPosition = 28 + ((120 - distanceToExit) / 120) * 37;
   // 처음부터 보이도록 왼쪽에 두고, 답을 선택하지 않은 시간이 길수록 탐험가 쪽으로 전진.
-  const monsterPosition = Math.min(heroPosition - 5, 0 + danger * 20 + (idleSeconds / 20) * 16);
+  // 멀리에서 출발: 시작 시 손 대부분은 화면 밖에 있고, 시간·무응답에 따라 점점 접근.
+  // 20초 무응답이면 캐릭터에게 닿기 직전까지 접근하며 실패 처리됩니다.
+  const monsterApproach = Math.min(1, danger * 0.36 + (idleSeconds / 20) * 0.72);
+  const monsterX = -114 + monsterApproach * 185;
+  const monsterScale = 0.65 + monsterApproach * 0.55;
   const escapeFloor = isEscaped 
     ? '지상 탈출 성공! 🏆' 
     : distanceToExit <= 25 
@@ -446,7 +450,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           <span className="text-[11px] text-rose-300 font-bold">에너지 {hearts}/5 · 연속 오답 {wrongStreak}/3</span>
         </div>
         <div className="flex items-center justify-center gap-2 text-xs font-semibold text-blue-200">
-          <span>푸른 괴물 추격 중</span>
+          <span>{idleSeconds >= 15 ? '괴물이 바로 뒤에 있습니다!' : '푸른 괴물이 다가옵니다'}</span>
           <span className={idleSeconds >= 15 ? 'text-rose-400 animate-pulse font-black' : 'text-amber-300'}>무응답 {idleSeconds}/20초</span>
           <div className="h-1.5 w-16 rounded-full bg-stone-700 overflow-hidden"><div className="h-full bg-blue-400 transition-all duration-200" style={{ width: `${Math.min(100, idleSeconds * 5)}%` }} /></div>
         </div>
@@ -455,9 +459,14 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           {/* Moving Stone Floor */}
           <div className="absolute bottom-0 left-0 right-0 h-4 bg-stone-800 border-t-2 border-amber-900/60 animate-floor" />
 
-          {/* 처음부터 보이는 거대한 파란 손. 뒤에서 점점 가까워지는 추격자 */}
-          <div className="absolute bottom-2 z-10 transition-[left] duration-500 ease-linear pointer-events-none"
-            style={{ left: `${monsterPosition}%` }}>
+          {/* 먼 곳의 어두운 미궁에서 점점 커지며 접근하는 푸른 괴물의 손 */}
+          <div className="absolute bottom-2 z-10 pointer-events-none transition-[left,transform,opacity] duration-700 ease-linear"
+            style={{
+              left: `${monsterX}px`,
+              transform: `scale(${monsterScale})`,
+              transformOrigin: 'left bottom',
+              opacity: 0.7 + monsterApproach * 0.3
+            }}>
             <BlueMonsterArm />
           </div>
           {/* 출구를 향해 달리는 탐험가 */}
