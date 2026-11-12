@@ -269,12 +269,15 @@ export default function App() {
     timeTakenSeconds: number;
     speedPerQuestion: number;
     escapeFloor: string;
+    correctCount: number;
+    totalAnswered: number;
   }) => {
     const gainedXP = Math.round(result.score / 6);
     const { profile, leveledUp } = storageService.addXP(gainedXP);
 
-    const isEscaped = result.escapeFloor.includes('지상 탈출');
-    const escapeRate = isEscaped ? 100 : Math.min(95, Math.round((result.score / 1500) * 100));
+    const survived = result.escapeFloor.includes('60초 생존 성공');
+    // 미궁 탈출은 점수로 거리를 환산하지 않고 실제 생존 시간만 표시합니다.
+    const escapeRate = survived ? 100 : Math.min(99, Math.round((result.timeTakenSeconds / 60) * 100));
 
     const { newRank } = storageService.recordQuizScore(
       result.score,
@@ -302,7 +305,7 @@ export default function App() {
       score: result.score,
       accuracy: result.accuracy,
       maxCombo: result.maxCombo,
-      mode: '스피드 배틀',
+      mode: '60초 생존 도전',
       timeTakenSeconds: result.timeTakenSeconds,
       speedPerQuestion: result.speedPerQuestion,
       escapeFloor: result.escapeFloor
@@ -314,8 +317,8 @@ export default function App() {
       score: result.score,
       accuracy: result.accuracy,
       maxCombo: result.maxCombo,
-      totalAnswered: Math.round(result.score / 100),
-      correctCount: Math.round((result.score / 100) * (result.accuracy / 100)),
+      totalAnswered: result.totalAnswered,
+      correctCount: result.correctCount,
       gainedXP,
       leveledUp,
       newRank,
