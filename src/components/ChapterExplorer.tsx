@@ -76,9 +76,9 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Search and Era Filter Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="flex flex-col gap-3">
         {/* Interactive Segmented Tabs */}
-        <div className="flex items-center gap-1 p-1 bg-stone-200/80 dark:bg-stone-800/80 rounded-xl overflow-x-auto text-xs font-medium">
+        <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-stone-200/80 dark:bg-stone-800/80 rounded-xl text-xs font-medium" aria-label="시대별 단원 필터">
           {eras.map(era => (
             <button
               key={era.key}
@@ -95,7 +95,7 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
         </div>
 
         {/* Search Input */}
-        <div className="relative min-w-[260px]">
+        <div className="relative w-full sm:max-w-md">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
           <input
             type="text"
@@ -108,14 +108,15 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
       </div>
 
       {/* Main Two-Zone Sandbox Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-7 items-start">
         {/* Left: Chapter Navigator List (4 cols) */}
-        <div className="lg:col-span-5 space-y-2.5 max-h-[750px] overflow-y-auto pr-1">
+        <div className="lg:col-span-5 min-w-0 space-y-2.5">
           <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 px-1 pb-1">
             <span>단원 목록 ({filteredChapters.length}개)</span>
             <span>완료: {completedChapterIds.length}/{chapters.length}</span>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2">
           {filteredChapters.map(chapter => {
             const isSelected = chapter.id === selectedChapterId;
             const isCompleted = completedChapterIds.includes(chapter.id);
@@ -124,13 +125,13 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
               <button
                 key={chapter.id}
                 onClick={() => setSelectedChapterId(chapter.id)}
-                className={`w-full text-left p-3.5 rounded-xl border transition-all flex items-start gap-3.5 ${
+                className={`w-full min-w-0 text-left p-2.5 rounded-xl border transition-all flex items-start gap-2.5 ${
                   isSelected
                     ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-600/60 dark:border-amber-500/50 shadow-sm'
                     : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:border-stone-300 dark:hover:border-stone-700'
                 }`}
               >
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
                   isSelected
                     ? 'bg-amber-700 text-white shadow-xs'
                     : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300'
@@ -148,11 +149,11 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
                     )}
                   </div>
 
-                  <h3 className="font-bold text-sm text-stone-900 dark:text-stone-100 truncate">
+                  <h3 className="font-bold text-xs sm:text-sm text-stone-900 dark:text-stone-100 break-keep leading-snug">
                     {chapter.title}
                   </h3>
 
-                  <p className="text-xs text-stone-500 dark:text-stone-400 truncate mt-0.5">
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400 line-clamp-2 mt-0.5">
                     {chapter.subtitle}
                   </p>
                 </div>
@@ -163,6 +164,7 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
               </button>
             );
           })}
+          </div>
         </div>
 
         {/* Right: Detailed Concept Deck & Quiz Launcher (7 cols) */}
@@ -255,15 +257,15 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
           </div>
 
           {/* Quiz Action Launch Deck */}
-          <div className="pt-6 border-t border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="pt-6 border-t border-stone-200 dark:border-stone-800 flex flex-col gap-3 min-w-0">
             <div className="text-xs text-stone-500 dark:text-stone-400">
               개념 복습 완료! 이제 퀴즈로 실력을 확인하세요.
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="grid w-full min-w-0 grid-cols-2 2xl:grid-cols-4 gap-2">
               <button
                 onClick={() => onStartQuiz(selectedChapter.id, '초급')}
-                className="flex-1 sm:flex-none px-3.5 py-2 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800/60 transition-colors"
+                className="w-full min-w-0 px-2 py-3 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800/60 transition-colors"
               >
                 초급 퀴즈 (5문항)
               </button>
@@ -281,7 +283,7 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
               </button>
               <button
                 onClick={onStartAdaptive}
-                className="flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-lg bg-amber-700 hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white shadow-xs transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
+                className="w-full min-w-0 px-2 py-3 text-xs font-bold rounded-lg bg-amber-700 hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white shadow-xs transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
                 <span>적응형 실전</span>
