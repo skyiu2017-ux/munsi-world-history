@@ -20,7 +20,7 @@ export async function fetchRemoteLeaderboard(): Promise<LeaderboardEntry[]> {
   const res = await fetch(`${API_URL}?t=${Date.now()}`, { redirect: 'follow', signal: withTimeout(15000) });
   const data = await res.json();
   if (!data?.ok || !Array.isArray(data.entries)) throw new Error(data?.error || 'bad response');
-  if (data.version !== 2) throw new Error('Google Apps Script를 새 Code.gs 버전으로 다시 배포해야 합니다.');
+  if (data.version !== 3) throw new Error('Google Apps Script를 새 Code.gs 버전으로 다시 배포해야 합니다.');
 
   return data.entries.map((e: any): LeaderboardEntry => ({
     id: String(e.id),
@@ -43,14 +43,14 @@ export async function fetchRemoteLeaderboard(): Promise<LeaderboardEntry[]> {
 }
 
 // 내 기록 한 줄을 서버에 올립니다. played=true 일 때만 플레이 횟수가 올라가고 새 줄이 만들어집니다.
-export async function submitRemoteEntry(entry: LeaderboardEntry, played: boolean, studentName: string, studentNumber: number): Promise<boolean> {
+export async function submitRemoteEntry(entry: LeaderboardEntry, played: boolean, studentName: string, studentNumber: number): Promise<string> {
   const res = await fetch(API_URL, {
     method: 'POST',
     redirect: 'follow',
     // text/plain 으로 보내야 브라우저 사전 요청(preflight) 없이 Apps Script가 받습니다.
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({
-      id: entry.id,
+      id: `stu-${entry.gradeClass.match(/^(\\d+)학년\\s+(\\d+)반$/)?.[1] || 3}-${entry.gradeClass.match(/^(\\d+)학년\\s+(\\d+)반$/)?.[2] || 0}-${studentNumber}`,
       mode: entry.mode === 'speed' ? 'speed' : 'adaptive',
       nickname: entry.nickname,
       gradeClass: entry.gradeClass,
@@ -77,5 +77,6 @@ export async function submitRemoteEntry(entry: LeaderboardEntry, played: boolean
     if (code === 'busy') throw new Error('server_busy');
     throw new Error(code);
   }
-  return true;
+  if (typeof data.publicId !== 'string' || !/^rank-[A-Za-z0-9_-]{20,40}$/.test(data.publicId)) throw new Error('bad_public_id');
+  return data.publicId;
 }
