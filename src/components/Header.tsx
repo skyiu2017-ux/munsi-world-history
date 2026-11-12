@@ -22,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDailyQuiz
 }) => {
   return (
+    <>
     <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-stone-900/90 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 transition-colors">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 md:gap-8">
         {/* Zone 1: Brand Wordmark */}
@@ -139,6 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
       </div>
+    </header>
       {/* 화면이 작은 휴대전화에서도 모든 메뉴에 접근할 수 있는 고정 하단 메뉴 */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 grid grid-cols-4 border-t border-stone-200 dark:border-stone-700 bg-white/95 dark:bg-stone-900/95 backdrop-blur-lg shadow-[0_-4px_18px_rgba(0,0,0,0.1)] pb-[env(safe-area-inset-bottom)]" aria-label="모바일 주요 메뉴">
         {([
@@ -155,6 +157,6 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         ))}
       </nav>
-    </header>
+    </>
   );
 };
