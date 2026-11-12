@@ -109,12 +109,14 @@ export default function App() {
 
   // 학급 랭킹 서버(구글 시트) 동기화
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'error'>('idle');
+  const [syncErrorMessage, setSyncErrorMessage] = useState<string>('');
   const syncLeaderboard = async () => {
     if (!isRemoteEnabled()) return;
     setSyncState('syncing');
     const result = await storageService.syncLeaderboardWithServer();
     setLeaderboard(storageService.getLeaderboard());
     setSyncState(result === 'error' ? 'error' : 'idle');
+    setSyncErrorMessage(result === 'error' ? storageService.getLastSyncError() : '');
   };
 
   // 앱을 열 때와 랭킹 탭에 들어올 때 최신 기록을 받아옵니다.
@@ -351,6 +353,14 @@ export default function App() {
       />
 
       {/* Main Content Area */}
+      {syncErrorMessage && (
+        <div role="alert" className="mx-auto max-w-5xl mt-3 px-4">
+          <div className="rounded-xl border-2 border-rose-400 bg-rose-50 dark:bg-rose-950/50 text-rose-900 dark:text-rose-100 p-3 text-sm font-semibold flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+            <span>⚠️ 랭킹 기록 미저장: {syncErrorMessage}</span>
+            <button type="button" className="shrink-0 rounded-lg border border-rose-400 px-3 py-1.5 text-xs font-bold" onClick={syncLeaderboard}>다시 확인</button>
+          </div>
+        </div>
+      )}
       <main className="flex-1 pb-28 md:pb-16">
         {currentTab === 'quizSession' && quizConfig ? (
           <QuizEngine
