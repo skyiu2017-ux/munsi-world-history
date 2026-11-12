@@ -243,6 +243,10 @@ export const storageService = {
   },
 
   // 서버(구글 시트)와 모드별 최고 기록 동기화. 보내지 못한 기록은 기기에 남겨 둡니다.
+  getLastSyncError(): string {
+    try { return localStorage.getItem('wh_last_sync_error') || ''; } catch { return ''; }
+  },
+
   syncLeaderboardWithServer(): Promise<'ok' | 'error' | 'disabled'> {
     const run = syncQueue.then(() => this.runLeaderboardSync());
     syncQueue = run.catch(() => undefined);
@@ -253,13 +257,16 @@ export const storageService = {
     if (!isRemoteEnabled()) return 'disabled';
     const playerId = this.getPlayerId();
     try {
-      // 옛 서버에는 모드 정보가 없어 두 게임의 점수가 섞일 수 있습니다.
-      // 서버 버전부터 확인하고, 오래된 경우 로컬 기록을 보존합니다.
-      await fetchRemoteLeaderboard();
+      localStorage.removeItem('wh_last_sync_error');
+      // 동기화 1회당 서버 전체 조회는 한 번만 수행합니다.
+      // 서버 버전이 잘못되면 POST를 보내기 전에 오류를 표시합니다.
+      const remote = await fetchRemoteLeaderboard();
       const raw = localStorage.getItem(STORAGE_KEYS.PENDING_SYNC) || '';
       const pending: string[] = raw.startsWith('[') ? JSON.parse(raw) : [];
       const mine = this.getLeaderboard().filter(e => e.isCurrentUser && (e.mode === 'adaptive' || e.mode === 'speed'));
       const remaining: string[] = [];
+      const sentModes = new Set<string>();
+      let specificError = '';
       for (const token of pending) {
         const modes = token === 'profile' ? ['adaptive', 'speed'] : [token.replace('played:', '')];
         for (const mode of modes) {
@@ -270,8 +277,16 @@ export const storageService = {
             const profile = this.getUserProfile();
             const ok = Boolean(profile.studentName && profile.studentNumber) &&
               await submitRemoteEntry(entry, token.startsWith('played:'), profile.studentName!, profile.studentNumber!);
-            if (!ok && !remaining.includes(token)) remaining.push(token);
+            if (ok) sentModes.add(mode);
+            else if (!remaining.includes(token)) remaining.push(token);
           } catch (e) {
+            const code = e instanceof Error ? e.message : '';
+            if (code === 'identity_conflict') specificError =
+              '이 반·번호는 다른 이름으로 이미 등록되어 있습니다. 학생 정보를 확인하고 담당 선생님께 정정을 요청하세요. 이번 기록은 서버에 저장되지 않았습니다.';
+            else if (code === 'server_busy' && !specificError) specificError =
+              '학생들의 기록 등록이 몰려 서버가 바쁩니다. 잠시 뒤 랭킹 새로고침을 눌러주세요. 기록은 이 기기에 남아 있습니다.';
+            else if (!specificError) specificError =
+              '랭킹에 기록을 보내지 못했습니다. 인터넷 연결과 서버 설정을 확인해 주세요. 기록은 이 기기에 남아 있습니다.';
             if (!remaining.includes(token)) remaining.push(token);
           }
         }
@@ -279,22 +294,33 @@ export const storageService = {
       if (remaining.length) localStorage.setItem(STORAGE_KEYS.PENDING_SYNC, JSON.stringify(remaining));
       else localStorage.removeItem(STORAGE_KEYS.PENDING_SYNC);
 
-      const remote = await fetchRemoteLeaderboard();
       let merged: LeaderboardEntry[] = remote
         .filter(e => e.mode === 'adaptive' || e.mode === 'speed')
         .map(e => ({ ...e, isCurrentUser: e.id === playerId }));
-      // 오프라인 상태에서 저장된 두 게임의 기록이 사라지지 않도록 보존
-      const unsentModes = new Set(remaining.filter(t => t.startsWith('played:')).map(t => t.slice(7)));
+      // 등록 직전 조회된 결과에 방금 등록된 내 기록을 반영합니다.
+      // 이 단계에서는 추가 GET 요청이 필요하지 않습니다.
+      const retainedModes = new Set([...sentModes,
+        ...remaining.filter(t => t.startsWith('played:')).map(t => t.slice(7))]);
       for (const entry of mine) {
-        if (unsentModes.has(entry.mode || '')) {
+        if (retainedModes.has(entry.mode || '')) {
           merged = merged.filter(e => !(e.id === entry.id && e.mode === entry.mode));
           merged.push(entry);
         }
       }
       this.saveLeaderboard(rankEntries(merged));
-      return remaining.length ? 'error' : 'ok';
+      if (remaining.length) {
+        localStorage.setItem('wh_last_sync_error', specificError ||
+          '일부 기록의 서버 저장에 실패했습니다. 기록은 이 기기에 남아 있습니다.');
+        return 'error';
+      }
+      return 'ok';
     } catch (e) {
       console.error('Failed to sync leaderboard', e);
+      const detail = e instanceof Error ? e.message : '';
+      const message = detail.includes('Code.gs') ?
+        '랭킹 서버가 이전 버전입니다. 담당 선생님이 Google Apps Script를 새 버전으로 배포해야 합니다.' :
+        '서버에서 랭킹을 불러오지 못했습니다. 기기에 남은 기록은 삭제되지 않습니다.';
+      try { localStorage.setItem('wh_last_sync_error', message); } catch {}
       return 'error';
     }
   },
