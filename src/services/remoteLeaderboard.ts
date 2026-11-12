@@ -69,5 +69,13 @@ export async function submitRemoteEntry(entry: LeaderboardEntry, played: boolean
     signal: withTimeout(15000)
   });
   const data = await res.json();
-  return data?.ok === true;
+  if (!data?.ok) {
+    const code = String(data?.error || 'server_error');
+    if (code === 'identity_conflict') {
+      throw new Error('identity_conflict');
+    }
+    if (code === 'busy') throw new Error('server_busy');
+    throw new Error(code);
+  }
+  return true;
 }
