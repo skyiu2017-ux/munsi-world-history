@@ -30,12 +30,12 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={() => onSelectTab('explore')}
           className="flex items-center gap-2 text-left group shrink-0 min-w-0"
         >
-          <div className="w-9 h-9 rounded-lg bg-amber-700 dark:bg-amber-600 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-amber-700 dark:bg-amber-600 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
             <span className="font-display font-extrabold text-sm sm:text-lg tracking-tight text-stone-900 dark:text-stone-100 whitespace-nowrap">
-              중3 세계사 마스터
+              <span className="sm:hidden">세계사</span><span className="hidden sm:inline">중3 세계사 마스터</span>
             </span>
             <span className="hidden sm:inline-block text-xs text-stone-500 dark:text-stone-400 ml-2">
               중학 역사① · 세계사
@@ -104,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Daily Keyword Quiz Button */}
           <button
             onClick={onOpenDailyQuiz}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
             title="오늘의 역사 키워드 퀴즈 풀기"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-600" />
