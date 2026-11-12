@@ -126,7 +126,7 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2">
           {filteredChapters.map(chapter => {
-            const isSelected = chapter.id === selectedChapterId;
+            const isSelected = chapter.id === selectedChapter.id;
             const isCompleted = completedChapterIds.includes(chapter.id);
 
             return (
@@ -176,6 +176,7 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
         </div>
 
         {/* Right: Detailed Concept Deck & Quiz Launcher (7 cols) */}
+        {filteredChapters.length > 0 ? (
         <div className="lg:col-span-7 bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm p-6 sm:p-8 space-y-6">
           {/* Chapter Header */}
           <div className="space-y-2 border-b border-stone-200 dark:border-stone-800 pb-5">
@@ -218,7 +219,7 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
           <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 space-y-1.5">
             <div className="flex items-center gap-2 text-xs font-bold text-rose-800 dark:text-rose-400">
               <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>선생님이 자주 내는 내신 함정 주의!</span>
+              <span>혼동하기 쉬운 핵심 개념</span>
             </div>
             <p className="text-xs text-rose-900 dark:text-rose-200 pl-6 leading-relaxed">
               {selectedChapter.concept.examPitfall}
@@ -299,6 +300,9 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
             </div>
           </div>
         </div>
+        ) : (
+          <div className="lg:col-span-7 p-8 rounded-2xl border border-dashed border-stone-300 dark:border-stone-700 text-sm text-stone-600 dark:text-stone-300">해당하는 단원이 없습니다. 검색어 또는 시대별 필터를 바꾸어 주세요.</div>
+        )}
       </div>
     </div>
   );
