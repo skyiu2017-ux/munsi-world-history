@@ -115,7 +115,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
     endedRef.current = true;
     clearInterval(timerRef.current);
     setFinalTimeSeconds(60);
-    setScore(prev => prev + 3000); // 60초 생존 보너스
+    setScore(prev => prev + 500); // 60초 생존 보너스
     setGameState('ended');
     confetti({ particleCount: 120, spread: 85, origin: { y: 0.6 } });
   }, [gameState, timeLeft]);
@@ -261,7 +261,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">2.</span>
-            <span>60초를 끝까지 버티면 생존 성공! 정답 점수에 생존 보너스 3,000점이 더해집니다.</span>
+            <span>60초를 끝까지 버티면 생존 성공! 정답 점수에 생존 보너스 500점이 더해집니다.</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-orange-500 font-bold">3.</span>
@@ -306,7 +306,7 @@ export const SpeedChallenge: React.FC<SpeedChallengeProps> = ({
           </h2>
           <p className="text-sm text-stone-600 dark:text-stone-400">
             {isSurvived
-              ? `60초 동안 정답 ${correctCount}개! 생존 보너스 1,200점을 획득했습니다.`
+              ? `60초 동안 정답 ${correctCount}개! 생존 보너스 500점을 획득했습니다.`
               : failReason || '괴물에게 붙잡혔습니다. 다시 도전해 보세요.'}
           </p>
         </div>
