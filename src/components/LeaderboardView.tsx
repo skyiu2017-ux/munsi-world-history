@@ -142,7 +142,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           onClick={() => { setSelectedMode('adaptive'); setSortMetric('score'); }}
           className={`flex-1 min-w-[145px] rounded-lg px-4 py-3 text-sm font-bold ${selectedMode === 'adaptive' ? 'bg-amber-700 text-white' : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200'}`}>레벨업 퀴즈 랭킹</button>
         <button type="button" role="tab" aria-selected={selectedMode === 'speed'}
-          onClick={() => { setSelectedMode('speed'); setSortMetric('speed'); }}
+          onClick={() => { setSelectedMode('speed'); setSortMetric('score'); }}
           className={`flex-1 min-w-[145px] rounded-lg px-4 py-3 text-sm font-bold ${selectedMode === 'speed' ? 'bg-blue-700 text-white' : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200'}`}>60초 미궁 탈출 랭킹</button>
       </div>
       {/* Header and User Quick Summary */}
@@ -304,7 +304,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                 }`}
               >
                 <Clock className="w-3 h-3" />
-                <span>탈출 속도순</span>
+                <span>생존 시간순</span>
               </button>
               <button
                 onClick={() => setSortMetric('combo')}
