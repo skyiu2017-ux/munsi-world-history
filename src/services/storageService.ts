@@ -261,6 +261,9 @@ export const storageService = {
       // 동기화 1회당 서버 전체 조회는 한 번만 수행합니다.
       // 서버 버전이 잘못되면 POST를 보내기 전에 오류를 표시합니다.
       const remote = await fetchRemoteLeaderboard();
+      let publicId = '';
+      try { publicId = localStorage.getItem('wh_ranking_public_id') || ''; } catch {}
+
       const raw = localStorage.getItem(STORAGE_KEYS.PENDING_SYNC) || '';
       const pending: string[] = raw.startsWith('[') ? JSON.parse(raw) : [];
       const mine = this.getLeaderboard().filter(e => e.isCurrentUser && (e.mode === 'adaptive' || e.mode === 'speed'));
@@ -275,10 +278,14 @@ export const storageService = {
           if (!entry) continue;
           try {
             const profile = this.getUserProfile();
-            const ok = Boolean(profile.studentName && profile.studentNumber) &&
-              await submitRemoteEntry(entry, token.startsWith('played:'), profile.studentName!, profile.studentNumber!);
-            if (ok) sentModes.add(mode);
-            else if (!remaining.includes(token)) remaining.push(token);
+            const returnedId = profile.studentName && profile.studentNumber
+              ? await submitRemoteEntry(entry, token.startsWith('played:'), profile.studentName, profile.studentNumber)
+              : '';
+            if (returnedId) {
+              publicId = returnedId;
+              localStorage.setItem('wh_ranking_public_id', publicId);
+              sentModes.add(mode);
+            } else if (!remaining.includes(token)) remaining.push(token);
           } catch (e) {
             const code = e instanceof Error ? e.message : '';
             if (code === 'identity_conflict') specificError =
@@ -296,15 +303,15 @@ export const storageService = {
 
       let merged: LeaderboardEntry[] = remote
         .filter(e => e.mode === 'adaptive' || e.mode === 'speed')
-        .map(e => ({ ...e, isCurrentUser: e.id === playerId }));
+        .map(e => ({ ...e, isCurrentUser: !!publicId && e.id === publicId }));
       // 등록 직전 조회된 결과에 방금 등록된 내 기록을 반영합니다.
       // 이 단계에서는 추가 GET 요청이 필요하지 않습니다.
       const retainedModes = new Set([...sentModes,
         ...remaining.filter(t => t.startsWith('played:')).map(t => t.slice(7))]);
       for (const entry of mine) {
         if (retainedModes.has(entry.mode || '')) {
-          merged = merged.filter(e => !(e.id === entry.id && e.mode === entry.mode));
-          merged.push(entry);
+          merged = merged.filter(e => !(e.mode === entry.mode && (e.id === entry.id || (publicId && e.id === publicId))));
+          merged.push({ ...entry, id: publicId || entry.id, isCurrentUser: true });
         }
       }
       this.saveLeaderboard(rankEntries(merged));
@@ -336,7 +343,9 @@ export const storageService = {
         );
         real.forEach(e => {
           if (e.id === 'current-user') e.id = playerId; // 예전 버전 기록 이어받기
-          e.isCurrentUser = e.id === playerId;
+          let publicId = '';
+          try { publicId = localStorage.getItem('wh_ranking_public_id') || ''; } catch {}
+          e.isCurrentUser = e.id === playerId || (!!publicId && e.id === publicId);
           e.mode = e.mode === 'adaptive' || e.mode === 'speed' ? e.mode : 'legacy';
           e.schoolName = SCHOOL_NAME;
         });
@@ -391,7 +400,8 @@ export const storageService = {
     const newBest = !existing || score > existing.score;
     entries = entries.filter(e => !(e.isCurrentUser && e.mode === mode));
     const userEntry: LeaderboardEntry = {
-      id: this.getPlayerId(),
+      // 공개 ID가 이미 발급되었다면 그 ID를 유지하여 같은 학생으로 합칩니다.
+      id: (() => { try { return localStorage.getItem('wh_ranking_public_id') || this.getPlayerId(); } catch { return this.getPlayerId(); } })(),
       mode: mode === 'speed' ? 'speed' : 'adaptive',
       rank: 1,
       nickname: profile.nickname,
