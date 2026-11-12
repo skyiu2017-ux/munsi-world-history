@@ -44,13 +44,18 @@ export async function fetchRemoteLeaderboard(): Promise<LeaderboardEntry[]> {
 
 // 내 기록 한 줄을 서버에 올립니다. played=true 일 때만 플레이 횟수가 올라가고 새 줄이 만들어집니다.
 export async function submitRemoteEntry(entry: LeaderboardEntry, played: boolean, studentName: string, studentNumber: number): Promise<string> {
+  const classMatch = /^([0-9]+)학년 +([0-9]+)반$/.exec(entry.gradeClass);
+  if (!classMatch) throw new Error('bad_student_class');
+  if (!Number.isInteger(studentNumber) || studentNumber < 1 || studentNumber > 45)
+    throw new Error('bad_student_number');
+  const studentId = `stu-${Number(classMatch[1])}-${Number(classMatch[2])}-${studentNumber}`;
   const res = await fetch(API_URL, {
     method: 'POST',
     redirect: 'follow',
     // text/plain 으로 보내야 브라우저 사전 요청(preflight) 없이 Apps Script가 받습니다.
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({
-      id: `stu-${entry.gradeClass.match(/^(\\d+)학년\\s+(\\d+)반$/)?.[1] || 3}-${entry.gradeClass.match(/^(\\d+)학년\\s+(\\d+)반$/)?.[2] || 0}-${studentNumber}`,
+      id: studentId,
       mode: entry.mode === 'speed' ? 'speed' : 'adaptive',
       nickname: entry.nickname,
       gradeClass: entry.gradeClass,
