@@ -24,7 +24,6 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [selectedEraFilter, setSelectedEraFilter] = useState<string>('all');
 
-  const selectedChapter = chapters.find(c => c.id === selectedChapterId) || chapters[0];
 
   const eras = [
     { key: 'all', label: `전체 (${chapters.length}개)` },
@@ -52,6 +51,12 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
       c.concept.keyFigures.some(kf => kf.toLowerCase().includes(searchKeyword.toLowerCase()));
     return matchesEra && matchesSearch;
   });
+
+  // 필터 또는 검색을 변경한 뒤에도 오른쪽에 다른 시대의 단원이 남지 않도록 합니다.
+  const selectedChapter = filteredChapters.find(c => c.id === selectedChapterId)
+    || filteredChapters[0]
+    || chapters.find(c => c.id === selectedChapterId)
+    || chapters[0];
 
   const getIcon = (iconName: string) => {
     switch (iconName) {
@@ -116,6 +121,9 @@ export const ChapterExplorer: React.FC<ChapterExplorerProps> = ({
             <span>완료: {completedChapterIds.length}/{chapters.length}</span>
           </div>
 
+          {filteredChapters.length === 0 && (
+            <p className="p-4 text-sm text-stone-500 dark:text-stone-400 border border-dashed border-stone-300 dark:border-stone-700 rounded-xl">검색 결과가 없습니다. 다른 키워드를 입력해 보세요.</p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2">
           {filteredChapters.map(chapter => {
             const isSelected = chapter.id === selectedChapterId;
