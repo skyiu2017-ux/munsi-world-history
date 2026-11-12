@@ -27,7 +27,8 @@ function doGet() {
       .filter(function (r) { return r[0] !== '' && isValidClass_(String(r[2])); })
       .map(function (r) {
         return {
-          id: String(r[0]),
+          // 학년·반·번호를 URL 응답에 직접 노출하지 않습니다.
+          id: publicId_(String(r[0])),
           mode: r[15] === 'adaptive' || r[15] === 'speed' ? r[15] : 'legacy',
           nickname: String(r[1]),
           gradeClass: String(r[2]),
@@ -43,7 +44,7 @@ function doGet() {
           updatedAt: r[12] instanceof Date ? r[12].toISOString() : String(r[12])
         };
       });
-    return json_({ ok: true, version: 2, entries: entries });
+    return json_({ ok: true, version: 3, entries: entries });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
   }
@@ -140,12 +141,28 @@ function doPost(e) {
       row[5] = Math.max(num_(previous[5], 0, 10000), row[5]);
       sh.getRange(rowIndex, 1, 1, HEADERS.length).setValues([row]);
     }
-    return json_({ ok: true });
+    return json_({ ok: true, publicId: publicId_(id) });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
   } finally {
     lock.releaseLock();
   }
+}
+
+// 개인별 공개 랭킹 ID는 예측할 수 없는 서버 전용 비밀키로 HMAC 처리합니다.
+// 무작위 키는 스크립트 속성에만 저장하고 공개 응답으로 전송하지 않습니다.
+function publicId_(studentId) {
+  const props = PropertiesService.getScriptProperties();
+  let key = props.getProperty('RANKING_PUBLIC_ID_SECRET');
+  if (!key) {
+    // 공개 조회 또는 기록 등록 모두 스크립트 설정에 보존된 키를 사용합니다.
+    // 최종 설정 값으로 다시 읽어 여러 실행 간 동일 키를 유지합니다.
+    key = Utilities.getUuid() + '-' + Utilities.getUuid();
+    props.setProperty('RANKING_PUBLIC_ID_SECRET', key);
+    key = props.getProperty('RANKING_PUBLIC_ID_SECRET');
+  }
+  const bytes = Utilities.computeHmacSha256Signature(studentId, key);
+  return 'rank-' + Utilities.base64EncodeWebSafe(bytes).replace(/=+$/, '').slice(0, 28);
 }
 
 // 처음 설치할 때 Apps Script 편집기에서 이 함수를 한 번 실행하세요.
